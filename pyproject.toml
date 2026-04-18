@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "concordcoder"
+version = "0.1.0"
+description = "Cognitive alignment pipeline: extract context, align with user, generate under constraints"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.5",
+    "typer>=0.9",
+    "rich>=13.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.4", "ruff>=0.1", "pytest-mock>=3.12"]
+openai = ["openai>=1.30"]
+anthropic = ["anthropic>=0.26"]
+git = ["gitpython>=3.1"]
+semantic = ["chromadb>=0.5", "sentence-transformers>=3.0"]
+eval = ["pandas>=2.2", "matplotlib>=3.9", "scipy>=1.13"]
+all = [
+    "openai>=1.30",
+    "anthropic>=0.26",
+    "gitpython>=3.1",
+]
+
+[project.scripts]
+concord = "concordcoder.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/concordcoder"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
