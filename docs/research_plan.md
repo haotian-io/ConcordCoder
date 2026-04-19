@@ -1,470 +1,335 @@
-# ConcordCoder：代码生成中的认知对齐辅助系统
+# ConcordCoder：代码生成中的可解释认知对齐系统
 
-> **研究定位**：Software Engineering × Human-AI Interaction × LLM-based Code Generation  
-> **核心假设**：在代码生成前，通过"上下文重建 → 认知对齐对话 → 约束驱动生成"三阶段流程，可以显著提升 AI 辅助代码质量，并帮助用户更好地理解生成结果。
+> **投稿目标**：Automated Software Engineering (ASEJ) — Explainability in Automated Software Engineering (Ex-ASE) Special Issue  
+> **截稿时间**：2026 年 6 月 30 日  
+> **研究定位**：Software Engineering × Human-AI Interaction × Explainable LLM-based Code Generation  
+> **核心主张**：传统 LLM 代码生成对开发者而言是不可解释的黑盒。ConcordCoder 通过三个可解释机制解决这一问题：结构可解释性（Context Transparency）、约束可解释性（Constraint Grounding）、决策可解释性（Decision Traceability）。
 
 ---
 
 ## 一、研究动机与问题（Motivation & Problem）
 
-### 1.1 核心痛点
+### 1.1 核心痛点：三重认知鸿沟
 
-在现实软件开发中，用户使用 LLM 进行"vibe coding"（凭感觉描述需求后直接生成代码）存在三重鸿沟：
+在现实软件开发中，用户使用 LLM 进行"vibe coding"（凭感觉描述需求后直接生成代码）存在三重认知鸿沟（Cognitive Gap）：
 
-| 鸿沟类型 | 具体表现 |
-|---------|---------|
-| **模型理解 vs. 用户意图** | 模型对需求产生错误解读，生成逻辑偏差的代码 |
-| **用户当前记忆 vs. 代码历史** | 长期项目中用户忘记过去的设计决策、约束、边界条件 |
-| **表层需求 vs. 隐性约束** | 公开 API 兼容性、数据格式约束、错误处理策略等未被明确表达 |
+| 鸿沟类型 | 具体表现 | 对可解释性的影响 |
+|---------|---------|----------------|
+| **模型理解 vs. 用户意图** | 模型对需求产生错误解读，生成逻辑偏差的代码 | 用户不知道模型"理解了什么" |
+| **用户当前记忆 vs. 代码历史** | 长期项目中用户忘记过去的设计决策、约束、边界条件 | 用户无法判断生成代码是否符合历史约定 |
+| **表层需求 vs. 隐性约束** | 公开 API 兼容性、数据格式约束、错误处理策略等未被明确表达 | 生成代码违反约束但无人能察觉 |
 
-### 1.2 现有方法的局限性
+### 1.2 Post-hoc Feedback 的根本局限
 
-- **直接提示（Direct Prompting）**：用户一句话描述需求，模型直接生成，无法处理隐性约束
-- **测试驱动方法（TDD-like）**：需要用户事先写测试，门槛高，且仍不解决"共同理解"问题  
-- **RAG 检索增强**：只是给模型更多上下文，并未帮助用户"认知重建"
-- **TraceCoder 等调试框架**：关注生成后的修复，而非生成前的意图对齐
+现有代码生成工具（包括 GitHub Copilot、ChatGPT 等）本质上采用 **Post-hoc Feedback** 模式：
 
-### 1.3 ConcordCoder 的定位
+```
+[全局上下文 One-Shot Prompt] → LLM 生成代码
+         ↓
+编译出错 / 测试失败 / 用户否定
+         ↓
+用户反馈 → [重新生成] → 循环往复（试错）
+```
 
-> **目标不是"替用户写代码"，而是"先帮助用户和模型达成对现有系统的共同理解，再协同完成代码生成"。**
+**根本弱点**：每轮迭代都是"上帝视角"的重试，模型不知道哪里错了、为什么错了。用户也不知道下一次生成是否会更好。这是典型的**不可解释的黑盒循环**。
+
+ConvCodeWorld（2502.19852）已经系统性地研究了 Compilation / Execution / Verbal 三种 Feedback 的组合效果，发现即使有足够反馈，LLM 的 post-hoc 纠错能力也存在天花板。
+
+### 1.3 ConcordCoder 的核心思路：事后调试 → 事前规划
+
+> **目标**：在代码生成前，通过结构化对话让用户和系统就「做什么」「受什么约束」「为什么这样实现」达成可验证的共识，再进行约束感知的一次性生成。
 
 ```
 用户描述任务
      ↓
-[Phase 1] 上下文抽取与融合（Context Extraction & Fusion）
-  静态分析 + 语义检索 → ContextBundle
+[Phase 1] 多层上下文抽取（Context Extraction）
+  AST 静态分析 + 调用图 + Git 历史 + 测试约束推断 → ContextBundle
+  → 提供「结构可解释性」：LLM 依赖哪些上下文，用户可见
      ↓
-[Phase 2] 认知对齐对话（Alignment Dialogue）
-  人-AI 多轮交互 → 澄清约束、重建上下文 → AlignmentRecord
+[Phase 2] 约束基础的对齐对话（Constraint-Grounded Alignment Dialogue）
+  State Machine × Action Space × Constraint 前向验证 → AlignmentRecord
+  → 提供「约束可解释性」：所有约束有来源（AST/Git/Test/User），可追溯
      ↓
-[Phase 3] 约束驱动代码生成（Constrained Generation）
-  带验证的代码生成 + 解释性输出
-     ↓
-生成代码 + 认知摘要（为什么这样实现）
+[Phase 3] 约束驱动代码生成 + Cognitive Summary
+  带 Confidence-Guided Probing 的生成 → 代码 + 决策追踪表
+  → 提供「决策可解释性」：每个关键决策 traceback 到具体约束节点
 ```
 
 ---
 
-## 二、研究问题（Research Questions）
+## 二、三项技术贡献（Technical Contributions）
 
-### RQ1：ConcordCoder 能否提升 vibe coding 的代码质量？
+### Contribution 1：Constraint-Grounded Alignment Dialogue（约束基础对齐对话）
 
-**核心假设**：认知对齐前置处理能减少因需求误解导致的代码错误，提高最终代码与仓库约束的匹配程度。
+#### 对话状态机（Dialogue State Machine）
 
-**比较对象（Baseline）**：
-1. **Direct**：直接将用户需求发给 LLM，单轮生成
-2. **RAG-only**：检索相关代码片段注入 prompt，单轮生成
-3. **Clarify-then-Code**（消融）：只做意图澄清对话，不做仓库上下文分析
-4. **ContextOnly**（消融）：只做上下文抽取，不做对齐对话
-5. **ConcordCoder**：完整三阶段流程（上下文抽取 + 对齐对话 + 约束生成）
+对话不再是流水账，而是有严格的状态定义和 Action Space：
 
-**评估指标**：
-- **Pass@1（测试通过率）**：主要指标，使用 SWE-bench Verified 子集
-- **Constraint Violation Rate（约束违背率）**：检测生成代码是否破坏了已知约束
-- **Regression Rate（回归率）**：生成代码是否导致原有测试失败
-- **Edit Distance to Ground Truth**：与标准答案的编辑距离（补充指标）
-
-### RQ2：ConcordCoder 对用户认知的主客观影响
-
-**核心假设**：认知对齐流程能让用户更好地理解项目现有结构，并在生成后对代码有更准确的认知评估。
-
-#### 主观评价（Subjective）
-
-用户完成任务后填写问卷（7点量表），维度包括：
-- **意图准确性感知**（"系统生成的代码是否符合你的意图"）
-- **理解深度感知**（"完成后你是否更了解项目现有结构"）
-- **信任度**（"你对生成代码的信任程度"）
-- **认知负荷**（NASA-TLX 量表）
-
-#### 客观评价（Objective）
-
-使用**理解度测验**：任务完成后向用户提问与项目结构/约束相关的问题：
-- "该项目中，为什么 `payment_handler.py` 不能直接调用 `database.commit()`？"
-- "如果你修改了 `retry_policy`，哪些其他模块需要更新？"
-
-对比 ConcordCoder 组 vs. Direct 组用户的答题准确率，作为认知理解的客观度量。
-
-### RQ3：交互成本与收益分析
-
-**核心假设**：对齐对话引入了额外的交互轮次成本，但这些成本可以被代码修改次数减少所补偿。
-
-**指标**：
-- **对话轮次数**（Task Completion Turns）：完成任务所需的总对话轮数
-- **代码修改轮次**（Correction Rounds）：用户收到初始生成后进行修改的次数
-- **任务完成时间**（Task Completion Time）：端到端计时
-- **认知对齐收益率**（Alignment ROI）：`(代码质量提升) / (额外交互成本)`
-
----
-
-## 三、系统架构详细设计
-
-### 3.1 Phase 1：上下文抽取与融合（Context Extraction & Fusion）
-
-#### 现有基线实现（已有）
-
-关键词窗口检索（BundleBuilder v0），输出 ContextBundle 包含：task_summary、structural_facts、snippets（≤30个代码片段）、constraints_guess、risks、open_questions
-
-#### 升级目标：多层次分析管道
-
-```
-输入: repo_root + task_text
-     ↓
-Layer 1: 静态结构分析
-  · AST 解析 (tree-sitter / ast)
-  · 调用图构建 (networkx)
-  · 类型签名提取
-  · 模块依赖图
-     ↓
-Layer 2: 语义检索
-  · 代码嵌入 (CodeBERT / OpenAI text-embedding)
-  · 向量数据库 (ChromaDB / FAISS)
-  · 任务相关片段 Top-K 检索
-     ↓
-Layer 3: 历史痕迹分析
-  · Git commit message 分析 (gitpython)
-  · 注释/文档设计意图提取
-  · TODO/FIXME/HACK 标记收集
-  · 测试用例隐性约束识别
-     ↓
-Layer 4: LLM 融合与摘要
-  · 将三层结果融合为 ContextBundle
-  · LLM 生成结构性摘要
-  · 识别潜在风险与设计约束
-     ↓
-输出: ContextBundle (enriched)
-```
-
-**关键新增 Schema 字段**：
 ```python
-class ContextBundle(BaseModel):
-    # 现有字段...
-    call_graph: dict[str, list[str]]       # 调用关系图
-    entry_points: list[str]                # 关键入口文件
-    design_constraints: list[Constraint]   # 从注释/文档推断的约束
-    historical_decisions: list[str]        # Git 历史决策痕迹
-    test_expectations: list[str]           # 测试文件推断的行为期望
-    affected_modules: list[str]            # 本次任务可能影响的模块
+@dataclass
+class DialogueState:
+    phase: DialoguePhase                          # 当前子阶段
+    confirmed_constraints: List[Constraint]       # 已确认的硬约束（带来源）
+    open_questions: List[QuestionSpec]            # 待解答问题队列
+    implementation_sketch: SketchNode | None      # 方案雏形
+    user_confidence: Dict[ConstraintId, float]    # 用户对每条约束的置信度
+
+# 每条约束都有来源，确保可追溯性
+@dataclass
+class Constraint:
+    id: str
+    description: str
+    hard: bool
+    source: Literal["ast", "git_history", "test_inference", "user_stated"]
+    evidence: str   # 具体证据（如：「被 payment/checkout.py:L42 调用」）
 ```
 
-### 3.2 Phase 2：认知对齐对话（Alignment Dialogue）
+**Action Space (𝒜)**：
 
-对话分为**三个子阶段**，每个子阶段有明确的认知目标：
+| Action | 触发条件 | 对 State 的影响 |
+|--------|---------|----------------|
+| `CONFIRM_CONSTRAINT(id)` | 用户确认 | 约束加入 hard_constraints |
+| `REJECT_CONSTRAINT(id)` | 用户否定 | 从候选列表移除 |
+| `ADD_CONSTRAINT(desc)` | 用户补充 | 新建 source=user_stated 约束 |
+| `REQUEST_CLARIFICATION(q)` | 用户提问 | 系统用 LLM 解答，更新上下文 |
+| `SKETCH_PREFERENCE(option)` | 用户选方案 | 更新 implementation_sketch |
+| `COMMIT_TO_GENERATE` | 用户确认完毕 | 终止对话，触发 Phase 3 |
 
-**子阶段 A：上下文重建（Context Reconstruction）**
-> 目标：帮用户重建对项目现有结构的认知
+**对话三子阶段**：
 
-```
-系统: "我分析了你的仓库，发现以下与本次任务最相关的模块：
-  · payment/handler.py（支付核心逻辑，包含3个公开函数）
-  · retry/policy.py（重试策略，目前最大重试3次）
-  · tests/test_payment.py（12个测试，均依赖 mock_db 夹具）
-  
-其中：handler.py 的 process_payment() 被 3 个不同模块调用，
-改动签名会影响所有调用方。你对这些模块熟悉吗？"
-```
+- **Phase A：Context Reconstruction**  
+  系统展示 ContextBundle 中最相关的 2-3 个发现，帮用户"想起来"遗忘的项目细节，询问认知程度
+- **Phase B：Constraint Confirmation**  
+  展示推断出的约束清单（含来源证据），用户逐条确认/否定/补充；收集验收标准
+- **Phase C：Solution Co-design**  
+  提供 2-3 个实现方案（含利弊分析），用户选择偏好，系统形成最终实现策略
 
-**子阶段 B：约束确认（Constraint Confirmation）**
-> 目标：显式确认哪些约束必须遵循
+**与 Post-hoc 的核心对比**：
 
-```
-系统展示推断的约束清单，要求确认/修改：
-✅ 必须遵循（系统推断）
-  [C1] process_payment() 的函数签名不可更改（被3处调用）
-  [C2] 需兼容现有的 mock_db 测试夹具
-⚠️ 需要你确认的
-  [C4] 新功能是否需要兼容旧数据格式？[是/否]
-  [C5] 失败后应该抛出异常还是返回错误码？[抛/返回]
-❓ 发现的潜在风险
-  [R1] 现有代码没有事务回滚，新增重试可能导致重复扣款
-```
+| | Post-hoc Feedback | ConcordCoder |
+|---|---|---|
+| 干预时机 | 生成后，看到错误再改 | 生成前，共识达成后再生成 |
+| 约束处理 | 隐式（模型猜测） | 显式（用户确认，有来源） |
+| 可解释性 | 模型为什么这样改？不透明 | 每条约束可追溯到 AST/Git/User |
+| 轮次收敛 | 随机，依赖反馈质量 | 收敛到所有 open_questions 解答 |
 
-**子阶段 C：实现方案讨论（Solution Co-design）**
-> 目标：在约束框架内协同确定实现方案
+---
 
-```
-系统提供 2-3 个实现方案（保守/重构），分析利弊，
-询问用户偏好，形成最终实现策略。
-```
+### Contribution 2：Confidence-Guided Probing（置信度引导探针干预）
 
-**对话轮次控制**：最少 2 轮（约束确认）→ 标准 3-4 轮 → 详细 5-6 轮；用户明确说"可以生成了"时退出。
+#### 核心思路
 
-### 3.3 Phase 3：约束驱动代码生成（Constrained Generation）
-
-#### 生成流程
+这是 ConcordCoder 独特的**早期干预机制**：在 Draft Generation 阶段，系统不仅关注输出 Token，还追踪关键 AST 节点区间的生成置信度。当检测到低置信度 + 高历史修改频率的代码区域，系统主动向用户抛出探针问题，再精准重生成，而不是整体重来。
 
 ```
-1. 构建约束感知 System Prompt
-   (含 hard constraints + allowlist_paths + 验收标准)
-     ↓
-2. LLM 生成初始代码
-     ↓
-3. 约束验证器检测违规
-   - 违规 → 自动反馈，重生成（最多3次）
-   - 通过 → 继续
-     ↓
-4. 生成认知摘要（Cognitive Summary）
-   - 为什么这样实现
-   - 已处理的风险 / 仍需关注的风险
-   - 建议的验证步骤
+Draft Generation（使用 logprobs）
+         ↓
+Perplexity 估计：提取每个 Token 的 log-probability
+         ↓
+AST 节点映射：将 token 序列映射到 AST 节点（函数/类/跨文件调用）
+         ↓
+热点权重叠加：
+  hotspot_score(node) = (1 - confidence(node)) × git_churn_rate(node)
+         ↓
+阈值判断：hotspot_score > θ AND node 涉及历史技术债
+         ↓ 是
+生成探针问题：「我在 payment/handler.py:L156-172 的处理逻辑置信度较低
+              （该区域有 3 次近期修改记录）。请问这里期望的错误处理行为是？」
+         ↓
+用户回答 → 更新 AlignmentRecord → 精准重生成该区间
 ```
 
-#### 认知摘要输出格式示例
+#### 与 InlineCoder（2601.00376）的区别
+
+InlineCoder 也使用 Perplexity 估计，但其目的是**生成 anchor 以驱动上下文检索**（内联上下游调用），属于单轮生成优化。  
+ConcordCoder 将 Perplexity 用作**人机对话的触发机制**：
+- InlineCoder：低置信度 → 自动检索更多上下文 → 继续生成（无人介入）
+- ConcordCoder：低置信度 + 历史热点 → 向用户抛出探针问题 → 人机协同精修
+
+#### 工程实现
+
+```python
+# OpenAI API 支持返回 token 级 log-probability
+response = client.chat.completions.create(
+    model="gpt-4o",
+    messages=constrained_generation_messages,
+    logprobs=True,
+    top_logprobs=5,
+)
+
+def compute_node_confidence(logprobs, ast_node_spans):
+    """将 token logprobs 聚合到 AST 节点级别。"""
+    node_confidences = {}
+    for node_id, (start_tok, end_tok) in ast_node_spans.items():
+        node_logprobs = [lp.logprob for lp in logprobs[start_tok:end_tok]]
+        node_confidences[node_id] = math.exp(sum(node_logprobs) / len(node_logprobs))
+    return node_confidences
+
+def detect_probe_targets(node_confidences, git_churn, theta=0.4, alpha=0.5):
+    """识别需要探针干预的节点。"""
+    probes = []
+    for node_id, conf in node_confidences.items():
+        churn = git_churn.get(node_id, 0.0)
+        score = (1 - conf) * (1 + alpha * churn)
+        if score > theta:
+            probes.append(ProbeTarget(node_id=node_id, confidence=conf, churn=churn))
+    return sorted(probes, key=lambda p: -p.score)
+```
+
+---
+
+### Contribution 3：Cognitive Summary as Explainability Artifact（认知摘要作为可解释性产出）
+
+#### 增强格式（v2）
+
+认知摘要不再是自由文本，而是**结构化的决策追踪表**，每条决策 traceback 到具体的来源约束：
 
 ```markdown
-## 实现摘要
+## 认知摘要（Cognitive Summary）
 
-**我这样实现，因为：**
-- 遵循约束 C1（process_payment 签名不变）
-- 使用项目已有的 RetryPolicy 基类
-- 不影响 tests/test_payment.py 中现有的 12 个测试
+### 决策追踪表
+| 代码位置 | 实现决策 | 依据约束 | 约束来源 | 置信度 |
+|---------|---------|---------|---------|------|
+| payment_handler.py:L42 | 保持函数签名不变 | C1: 签名稳定性 | AST（被3处调用） | 🟢 高 |
+| retry_policy.py:L89 | 指数退避，最大3次 | C3（用户确认） | 对话 Phase B | 🟢 高 |
+| transaction.py:L156 | 幂等性校验 | R1: 重复扣款风险 | Git历史分析 | 🟡 中 |
 
-**注意以下风险点：**
-- ⚠️ R1：已添加幂等性检查以避免重复扣款，建议测试验证
-- ✅ R2：retry timeout 已与现有 connection_timeout 对齐
+### 低置信度警告区域（需人工复核）
+- ⚠️ payment/transaction.py:L156-172【置信度: 0.43】
+  原因：该函数在最近 30 天内有 3 次修改，涉及跨文件依赖
+  建议：重点检查此段逻辑，尤其与 checkout.py 的接口一致性
 
-**建议验证步骤：**
-1. pytest tests/test_payment.py -v
-2. 用 mock 模拟网络失败，验证重试行为
+### 验证建议
+1. `pytest tests/test_payment.py -v`（验证无回归）
+2. 用 mock 模拟网络失败，验证重试次数上限
+3. 人工检查 transaction.py:L156-172
 ```
+
+#### 可解释性评估
+
+使用 **Explanation Satisfaction Scale（ESS，Hoffman et al. 2023）** 的 7 点量表维度（中文本地化）：
+- 认知充分性：「我理解系统为什么这样实现」
+- 决策可追溯性：「我知道哪些因素影响了这段代码的生成」
+- 信任标定：「我知道哪些地方需要重点检查」
+- 行动支持：「这个摘要帮助我决定下一步怎么验证」
+
+---
+
+## 三、研究问题（Research Questions）
+
+### RQ1：约束基础生成是否优于无约束生成？
+**指标**：Pass@1（SWE-bench 子集）、Constraint Violation Rate、Regression Rate  
+**实验组**：Direct / RAG-only / Ablation-AlignOnly / Ablation-ContextOnly / ConcordCoder-Full
+
+### RQ2：Cognitive Summary 对开发者可解释性的影响
+**主观**：ESS 量表（4 维度，7 点），NASA-TLX 认知负荷  
+**客观**：Bug 定位速度（引入隐性 bug 后的发现时间）、项目结构理解度测验  
+
+### RQ3：Confidence-Guided Probing 有效性分析
+**指标**：Probe Precision（触发探针的区域与实际错误区域的重叠率）、额外对话轮次代价、生成质量提升（与无 Probing 的对比）
 
 ---
 
 ## 四、实验设计
 
-### 4.1 数据集选取
+### 4.1 数据集
 
-| 数据集 | 用途 | 规模 | 选取理由 |
+| 数据集 | 用途 | 规模 | 筛选标准 |
 |--------|------|------|---------|
-| **SWE-bench Verified** | RQ1 自动化评估 | 500 tasks | 真实 GitHub Issue，有标准测试验证 |
-| **SWE-bench Lite** | 快速迭代测试 | 300 tasks | 资源受限时替代 |
-| **CodeChat** | 用户交互行为分析 | 82,845 对话 | 真实用户-LLM 交互，分析对齐模式 |
-| **AweAI SCALE-SWE** | 扩展评估 | TBD | 更大规模多语言验证 |
+| **SWE-bench Verified** | RQ1 主评估 | 500 → 约 150 个子集 | ≥2 文件修改，≥3 fail-to-pass 测试 |
+| **CoderEval（2302.00288）** | RQ1 补充评估 | 230 Python + 230 Java | 真实仓库级任务，6 级 context dependency |
+| **用户实验仓库（自制）** | RQ2/RQ3 | 3 个小型 Python 项目 | 含 ≥10 模块，有 API 兼容约束，有 Git 历史 |
 
-**SWE-bench 子集筛选策略**：
-- 涉及 ≥2 文件修改（体现仓库级理解的必要性）
-- 有 ≥3 个 fail_to_pass 测试（约束验证更有意义）
-- 不是纯算法实现（需要理解现有代码结构）
+### 4.2 RQ1 实验（自动化）
 
-### 4.2 RQ1 实验设计（自动化评估）
-
-#### 实验条件（5组）
+五组条件对比：
 
 | 条件 | 描述 |
 |------|------|
-| **Baseline-Direct** | Issue 直接发给 GPT-4o，单轮生成 |
-| **Baseline-RAG** | 检索相关代码片段增强 prompt，单轮生成 |
-| **Ablation-AlignOnly** | 只做意图澄清，不做仓库上下文抽取 |
-| **Ablation-ContextOnly** | 只做上下文抽取，不做对齐对话 |
-| **ConcordCoder-Full** | 完整三阶段流程 |
+| Baseline-Direct | Issue 直接 One-Shot 发给 GPT-4o |
+| Baseline-RAG | 检索增强 prompt，单轮生成 |
+| Ablation-AlignOnly | 只做意图澄清，不做上下文抽取 |
+| Ablation-ContextOnly | 只做上下文抽取，不做对齐对话 |
+| **ConcordCoder-Full** | 完整三阶段 + Probing |
 
-#### 核心指标
+### 4.3 RQ2/RQ3 用户实验（N ≥ 16）
 
-- **Pass@1**：fail_to_pass 测试全部通过
-- **Constraint Violation Rate**：生成代码破坏已知约束的比例
-- **Regression Rate**：pass_to_pass 测试中出现失败的比例
+- **设计**：组间设计（Between-subject），ConcordCoder 组 vs. Direct 组
+- **任务池**：3 个仓库任务（支付重试 / 日志扩展 / 权限管理），复杂度低/中/高
+- **流程**：5 min 简介 → 15 min 熟悉仓库 → 30 min 完成任务 → 10 min 理解度测验 → 10 min ESS + NASA-TLX → 15 min 访谈
 
-### 4.3 RQ2 用户实验设计
+**理解度测验题示例（T1：支付重试）**：
+- Q1：`process_payment()` 被哪些模块调用？（选择题）
+- Q2：为什么不能直接修改 `transaction.py` 的函数签名？（简答）
+- Q3：当前 RetryPolicy 的最大重试次数是多少？（回忆题）
+- Q4：指出以下代码片段中可能导致重复扣款的行（代码阅读）
 
-#### 被试设计
+---
 
-- **规模**：N ≥ 20（ConcordCoder 组 10 人，Direct 组 10 人）
-- **来源**：有 1 年以上编程经验的开发者（CS 研究生）
-- **设计**：组间设计（Between-subject），避免学习效应
+## 五、与相关工作的定位
 
-#### 实验任务池（3 个）
+| 工作 | 方法 | 与 ConcordCoder 的区别 |
+|------|------|----------------------|
+| **InlineCoder（2601.00376）** | Perplexity → anchor → 上下游 inlining | 用 perplexity 做检索；我们用它做**人机探针触发** |
+| **A³-CodGen（2312.05772）** | Local + Global + 3rd-party 三层融合，单轮 | 无对话、无约束共识、无解释性输出 |
+| **ConvCodeWorld（2502.19852）** | Post-hoc feedback 的 benchmark 分析 | 研究什么反馈有效；我们研究**如何事前避免需要反馈** |
+| **CoderEval（2302.00288）** | 6 级 context dependency benchmark | 用于我们的 **RQ1 补充评估数据集** |
+| **In-IDE HAX SLR（2503.06195）** | "surface context, provide explanations, support user control" | 我们的设计恰好满足三点，引用作 design motivation |
+| **Human-Centered XAI（2110.10790）** | XAI 是 human-centered property | 引用作 explainability 理论基础 |
+| **SWE-agent** | 全自动 Agent，无用户认知关注 | 全自动化；我们以 human-in-the-loop 为核心 |
 
-| 任务 | 描述 | 复杂度 |
-|------|------|--------|
-| **T1: 支付重试** | 为支付模块增加带指数退避的重试逻辑 | 中 |
-| **T2: 日志扩展** | 为现有日志系统增加结构化输出格式 | 低 |
-| **T3: 权限管理** | 在 API 路由层增加细粒度权限验证 | 高 |
+---
 
-每个被试完成 1 个任务（减少疲劳），3 个任务在组间均匀分布。
-
-#### 实验流程（约 85 min）
+## 六、论文结构（ASEJ，预计 20-25 页）
 
 ```
-1. 简介 & 知情同意（5 min）
-2. 熟悉代码仓库（15 min，双组相同）
-3. 使用对应工具完成任务（30 min）
-   · ConcordCoder 组：全流程辅助
-   · Control 组：直接使用 ChatGPT
-4. 认知理解测验（10 min，客观题）
-5. 主观问卷（NASA-TLX + 感知量表）（10 min）
-6. 半结构化访谈（15 min）
-```
+1. Introduction
+   1.1 三重认知鸿沟与 LLM 代码生成的不可解释性
+   1.2 Post-hoc vs. Pre-hoc 干预
+   1.3 三项贡献（明确列出）
 
-#### 客观理解度测验题目示例（T1 - 支付重试）
+2. Background & Related Work
+   2.1 LLM-based Code Generation（RAG, Direct, Agentic）
+   2.2 Explainability in SE（引用 XAI SLR, In-IDE HAX）
+   2.3 Human-in-the-loop Code Generation（ConvCodeWorld, InlineCoder, A³-CodGen）
 
-- Q1: process_payment() 由哪些模块调用？（选择题）
-- Q2: 修改 payment_logger 格式需要更新哪些测试文件？（简答）
-- Q3: 指出以下代码片段中可能导致重复扣款的行（代码阅读）
-- Q4: 当前 RetryPolicy 的最大重试次数是多少？（回忆题）
+3. ConcordCoder Architecture
+   3.1 Phase 1: Multi-layer Context Extraction
+   3.2 Phase 2: Constraint-Grounded Alignment Dialogue
+        - Dialogue State Machine
+        - Action Space
+        - 三子阶段实现
+   3.3 Phase 3: Constrained Generation + Cognitive Summary
 
-### 4.4 RQ3 交互成本分析
+4. Confidence-Guided Probing
+   4.1 动机：何时应当干预
+   4.2 Token Perplexity → AST Node Confidence
+   4.3 热点权重（Git Churn）
+   4.4 探针问题生成与精准重生成
 
-**数据采集**：自动记录对话轮次、时间戳、git diff（代码修改次数）
+5. Evaluation
+   5.1 RQ1: Code Quality（SWE-bench + CoderEval）
+   5.2 RQ2: Explanation Quality（ESS + 理解度测验）
+   5.3 RQ3: Probing Effectiveness
 
-**核心分析指标**：
-```
-Alignment ROI =
-  (ConcordCoder 组 Pass@1 - Direct 组 Pass@1) /
-  (ConcordCoder 对话轮次 - Direct 对话轮次)
+6. Discussion
+   6.1 三项贡献的互补性
+   6.2 局限性与泛化性
+   6.3 对 Explainable AI-SE 的启示
+
+7. Conclusion
 ```
 
 ---
 
-## 五、技术实现路线图
+## 七、近期行动计划（～6 月 30 日）
 
-### 阶段 0（现状，已完成）
-- [x] 关键词窗口上下文抽取（BundleBuilder v0）
-- [x] 基础对话脚本（AlignmentDialogue 草案）
-- [x] Pipeline 骨架（extraction → alignment → generation）
-- [x] 数据结构定义（ContextBundle, AlignmentRecord, GenerationRequest）
+| 周次 | 重点任务 | 产出 |
+|------|---------|------|
+| **W1-2**（当前）| Intro + Related Work 骨架，Perplexity PoC 验证 | `paper/1_intro.tex`，`experiments/perplexity_poc.py` |
+| **W3-4** | Probing 模块完整实现，SWE-bench 环境搭建 | `src/concordcoder/generation/probing.py` |
+| **W5-6** | RQ1：50+ SWE-bench tasks，5 条件自动化实验 | `experiments/rq1_results.csv` |
+| **W7-8** | 用户实验招募（N≥16）+ 执行，收集 RQ2/RQ3 数据 | 原始问卷数据 + 交互日志 |
+| **W9-10** | 数据分析 + 论文全文起草 + 润色 + 投稿 | `paper/main.tex` 完稿 |
 
-### 阶段 1（第 1-2 周）：上下文抽取升级
-- [ ] 集成 `tree-sitter` 进行 AST 解析，提取函数/类定义
-- [ ] 构建模块级调用图（`ast` + `networkx`）
-- [ ] 集成 `ChromaDB` + 代码嵌入语义检索
-- [ ] 实现 Git 历史分析（`gitpython`，commit message）
-- [ ] 测试文件约束推断器
-
-### 阶段 2（第 2-3 周）：对齐对话 LLM 集成
-- [ ] 对接 OpenAI API / Anthropic Claude API
-- [ ] 实现三子阶段对话状态机
-- [ ] 约束推断 LLM Prompt（JSON 结构化输出）
-- [ ] 命令行交互界面（`rich` 库美化）
-
-### 阶段 3（第 3-4 周）：约束驱动生成
-- [ ] 约束感知 System Prompt 模板
-- [ ] 生成后约束违背自动检测
-- [ ] 再生成反馈循环（最多3次）
-- [ ] 认知摘要（Cognitive Summary）生成
-
-### 阶段 4（第 4-6 周）：实验基础设施
-- [ ] SWE-bench 测试用例跑通（Docker 环境）
-- [ ] 自动化评估脚本
-- [ ] 用户实验 Web UI（记录交互日志）
-- [ ] 数据分析流水线
-
-### 阶段 5（第 6-10 周）：实验执行 & 论文写作
-- [ ] RQ1 自动化实验执行
-- [ ] 用户实验招募 & 执行（RQ2/RQ3）
-- [ ] 数据分析 & 可视化
-- [ ] 论文初稿 & 投稿
-
----
-
-## 六、目录结构规划
-
-```
-ConcordCoder/
-├── src/concordcoder/
-│   ├── schemas.py               # ✅ 已有，需扩展新字段
-│   ├── pipeline.py              # ✅ 已有，需完善
-│   ├── cli.py                   # ✅ 已有
-│   │
-│   ├── extraction/
-│   │   ├── bundle_builder.py    # ✅ 基础版已有
-│   │   ├── ast_analyzer.py      # 🆕 AST 静态分析
-│   │   ├── call_graph.py        # 🆕 调用图构建
-│   │   ├── semantic_retriever.py# 🆕 向量语义检索
-│   │   ├── git_historian.py     # 🆕 Git 历史分析
-│   │   └── test_extractor.py    # 🆕 测试约束推断
-│   │
-│   ├── alignment/
-│   │   ├── dialogue.py          # ✅ 基础版已有
-│   │   ├── llm_dialogue.py      # 🆕 LLM 驱动对话
-│   │   ├── constraint_infer.py  # 🆕 约束推断
-│   │   └── state_machine.py     # 🆕 对话状态管理
-│   │
-│   ├── generation/
-│   │   ├── stub.py              # ✅ 基础版已有
-│   │   ├── constrained_gen.py   # 🆕 约束驱动生成
-│   │   ├── validator.py         # 🆕 生成后验证
-│   │   └── explainer.py         # 🆕 认知摘要生成
-│   │
-│   └── eval/                    # 🆕 评估工具
-│       ├── swebench_runner.py
-│       ├── metrics.py
-│       └── user_study_logger.py
-│
-├── experiments/                 # 🆕 实验脚本
-│   ├── rq1_automated/
-│   ├── rq2_user_study/
-│   └── rq3_cost_analysis/
-│
-├── docs/
-│   └── research_plan.md         # 📄 本文件（同步写入仓库）
-│
-└── tests/                       # ✅ 已有
-```
-
----
-
-## 七、相关工作定位
-
-| 工作 | 方法 | 与本工作区别 |
-|------|------|------------|
-| **TraceCoder**（arXiv:2602.06875）| 运行时 trace 驱动多智能体调试 | 关注**生成后**调试，本工作关注**生成前**对齐 |
-| **SWE-agent** | 自主 Agent 解 GitHub Issue | 全自动化，不关注用户认知；本工作以人为中心 |
-| **RAG-based Code Gen** | 检索增强生成 | 只给**模型**更多上下文；本工作同时给**用户**重建认知 |
-| **Copilot Chat** | 对话式代码辅助 | 无结构化约束提取，无认知对齐阶段 |
-| **CodeChat 分析工作** | 多轮对话代码生成分析 | 分析现象，本工作提出干预方案 |
-
----
-
-## 八、预期贡献
-
-1. **新问题定义**：首次系统性分析"认知鸿沟"在代码生成场景中的三重来源（模型理解 vs. 用户意图 vs. 历史设计），提出 Cognitive Alignment 作为解决框架
-
-2. **新系统 ConcordCoder**：实现了上下文抽取 → 认知对齐对话 → 约束驱动生成的完整管道，包含可验证的约束机制和解释性认知摘要
-
-3. **新评估框架**：提出结合主观感知、客观理解度测验、代码质量的多维评估体系，特别是**客观理解度测验**作为新颖的认知评估手段
-
-4. **实证发现**：通过自动化实验（RQ1）+ 用户实验（RQ2/RQ3），量化认知对齐对代码质量和用户理解的影响
-
----
-
-## 附录：初始 Prompt 模板草稿
-
-### A1. 上下文摘要生成
-
-```
-你是一个代码库分析助手。给定代码片段和任务描述，
-请用简洁的中文总结：
-1. 与本次任务最相关的模块（3-5个）和它们的核心职责
-2. 你发现的可能存在的设计约束
-3. 本次任务的潜在实现风险
-
-输出为结构化 JSON。
-```
-
-### A2. 对齐对话引导
-
-```
-你是帮助开发者重建项目认知的助手。
-基于分析结果，用自然对话方式：
-1. 展示最关键的 2-3 个发现（不要一次说太多）
-2. 提问用户对这些发现的认知程度
-3. 引导用户确认或修正推断的约束
-
-语气：专业但友好，像一位熟悉这个项目的同事。
-重点：帮用户"想起来"他们可能遗忘的项目细节。
-```
-
-### A3. 约束驱动生成 System Prompt
-
-```
-你是一个约束感知的代码生成助手。
-在生成代码时必须严格遵守以下约束：
-{confirmed_constraints}
-
-可以修改的文件范围：
-{allowlist_paths}
-
-生成代码后，请附上认知摘要：
-- 为什么这样实现（与约束的关联）
-- 哪些风险已处理，哪些仍需用户关注
-- 建议的验证步骤
-```
+> **关键里程碑**：W4 结束前需要有一个能运行的端到端 demo（最少 3 个完整 case），以便在 W5 开始系统性实验。
