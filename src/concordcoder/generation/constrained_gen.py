@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from concordcoder.alignment.prompts import SYSTEM_CODE_GENERATOR, build_constrained_generation_prompt
-from concordcoder.schemas import AlignmentRecord, Constraint, ContextBundle, GenerationRequest, GenerationResult
+from concordcoder.schemas import Constraint, ContextBundle, GenerationRequest, GenerationResult
 
 
 class ConstrainedGenerator:

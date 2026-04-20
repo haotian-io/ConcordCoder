@@ -1,10 +1,40 @@
-.venv/
+# Python
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing/Tools
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Builds
+build/
+develop-eggs/
 dist/
+downloads/
+eggs/
+.eggs/
 *.egg-info/
+*.egg
+
+# OS/IDE
+.DS_Store
+.idea/
+.vscode/
+
+# ConcordCoder output
 CONCORD_PLAN.md
-ConcordCoder_Paper/
-ConcordCoder_Paper/
+context.json

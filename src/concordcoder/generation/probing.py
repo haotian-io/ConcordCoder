@@ -209,8 +209,8 @@ class ProbingEngine:
 
         # Convert line numbers to approximate char offsets
         lines = code.splitlines(keepends=True)
-        start_char = sum(len(l) for l in lines[: start_line - 1]) if start_line > 1 else 0
-        end_char = sum(len(l) for l in lines[: end_line]) if end_line > 0 else len(code)
+        start_char = sum(len(line) for line in lines[: start_line - 1]) if start_line > 1 else 0
+        end_char = sum(len(line) for line in lines[: end_line]) if end_line > 0 else len(code)
 
         start_tok = char_to_tok.get(start_char, 0)
         end_tok = char_to_tok.get(min(end_char, len(code) - 1), len(tokens) - 1)
@@ -343,7 +343,7 @@ class ProbingEngine:
         # Rule-based fallback
         churn_note = ""
         if probe.git_churn > 0.3:
-            churn_note = f"（该区域有较多历史修改记录，可能存在隐性约束）"
+            churn_note = "（该区域有较多历史修改记录，可能存在隐性约束）"
 
         return (
             f"⚠️ 我在生成 {node_desc} 时置信度较低{churn_note}。\n"

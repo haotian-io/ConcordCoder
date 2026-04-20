@@ -104,7 +104,7 @@ def build_constraint_inference_prompt(bundle: ContextBundle, user_responses: str
     """Phase B: infer and present constraints for user confirmation."""
     parts = [
         f"## 任务描述\n{bundle.task_summary}\n",
-        f"## 已有约束猜测（来自代码分析）",
+        "## 已有约束猜测（来自代码分析）",
     ]
 
     for c in bundle.constraints_guess:
@@ -115,7 +115,7 @@ def build_constraint_inference_prompt(bundle: ContextBundle, user_responses: str
         parts.append(f"- ⚠️ 风险[{r.severity}]: {r.detail}")
 
     if bundle.affected_modules:
-        parts.append(f"\n## 可能受影响的模块\n" + "\n".join(f"- {m}" for m in bundle.affected_modules[:8]))
+        parts.append("\n## 可能受影响的模块\n" + "\n".join(f"- {m}" for m in bundle.affected_modules[:8]))
 
     if user_responses:
         parts.append(f"\n## 用户已提供的信息\n{user_responses}")

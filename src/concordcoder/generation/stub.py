@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from concordcoder.schemas import AlignmentRecord, ContextBundle, GenerationRequest
+from concordcoder.schemas import GenerationRequest
 
 
 def constrained_generation_placeholder(req: GenerationRequest) -> str:

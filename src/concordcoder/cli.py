@@ -12,7 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from concordcoder.extraction.bundle_builder import BundleBuilder
-from concordcoder.pipeline import run_pipeline, run_pipeline_and_write
+from concordcoder.pipeline import run_pipeline_and_write
 
 app = typer.Typer(no_args_is_help=True, help="ConcordCoder: 先对齐认知，再生成代码。")
 console = Console()
@@ -65,32 +65,32 @@ def extract(
 
     # Constraints
     if bundle.constraints_guess or bundle.design_constraints:
-        console.print(f"\n[bold]📌 推断的约束[/bold]:")
+        console.print("\n[bold]📌 推断的约束[/bold]:")
         for c in (bundle.constraints_guess + bundle.design_constraints)[:8]:
             label = "🔴" if c.hard else "🟡"
             console.print(f"  {label} [{c.id}] {c.description[:120]}")
 
     # Risks
     if bundle.risks:
-        console.print(f"\n[bold]⚠️  风险[/bold]:")
+        console.print("\n[bold]⚠️  风险[/bold]:")
         for r in bundle.risks[:5]:
             console.print(f"  [{r.severity}] {r.detail}")
 
     # Git decisions
     if bundle.historical_decisions:
-        console.print(f"\n[bold]📜 Git 历史设计决策[/bold]:")
+        console.print("\n[bold]📜 Git 历史设计决策[/bold]:")
         for d in bundle.historical_decisions[:5]:
             console.print(f"  · {d}")
 
     # Test expectations
     if bundle.test_expectations:
-        console.print(f"\n[bold]🧪 测试推断的约束[/bold]:")
+        console.print("\n[bold]🧪 测试推断的约束[/bold]:")
         for e in bundle.test_expectations[:5]:
             console.print(f"  · {e}")
 
     # Open questions
     if bundle.open_questions:
-        console.print(f"\n[bold red]❓ 未解决的问题[/bold red]:")
+        console.print("\n[bold red]❓ 未解决的问题[/bold red]:")
         for q in bundle.open_questions:
             console.print(f"  · {q}")
 

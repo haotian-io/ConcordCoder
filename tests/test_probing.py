@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import pytest
 
@@ -14,7 +13,7 @@ from concordcoder.generation.probing import (
     mock_logprobs_from_code,
     parse_openai_logprobs,
 )
-from concordcoder.schemas import ContextBundle, Constraint
+from concordcoder.schemas import ContextBundle
 
 
 # ─── Fixtures ───────────────────────────────────────────────────────────────
@@ -203,8 +202,6 @@ def test_flagged_lines_format(engine):
 
 def test_hotspot_score_increases_with_churn():
     """Spans with high git churn should have higher hotspot scores."""
-    e = ProbingEngine(confidence_threshold=0.9, churn_alpha=1.0)
-    span = ASTSpan("FunctionDef", "pay", start_token=0, end_token=10)
     conf = 0.5
     churn_low = 0.0
     churn_high = 1.0

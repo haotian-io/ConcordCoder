@@ -2,11 +2,10 @@
 
 from pathlib import Path
 
-import pytest
 
 from concordcoder.extraction.ast_analyzer import ASTAnalyzer
 from concordcoder.extraction.bundle_builder import BundleBuilder
-from concordcoder.extraction.call_graph import CallGraphBuilder, build_call_graph
+from concordcoder.extraction.call_graph import build_call_graph
 from concordcoder.extraction.test_extractor import TestExtractor
 
 

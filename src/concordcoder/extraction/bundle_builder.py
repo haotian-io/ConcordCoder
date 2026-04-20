@@ -227,7 +227,6 @@ class BundleBuilder:
                     continue
                 if not any(t in fn.name.lower() or t in rel_path.lower() for t in tokens):
                     continue
-                dependents = []  # would need cg_builder; simplify here
                 if fn.docstring and any(
                     kw in fn.docstring.lower()
                     for kw in ("do not", "must not", "never", "deprecated", "backward compat")
