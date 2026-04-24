@@ -2,6 +2,14 @@
 
 > **认知对齐辅助代码生成系统** — 先帮助用户和模型达成对现有系统的共同理解，再协同完成代码生成。
 
+## 工程根路径（本工作区）
+
+持续迭代与 `pip install -e` 的**唯一正式代码根**为：
+
+`ConcordCoder/ConcordCoder/Code/`
+
+（仓库中 `Paper/`、`ConcordCoder_Full_Session_History/`、上级目录的论文与笔记等为研究资产，不参与 `concord` 运行时。）
+
 ## 核心思路
 
 ```
@@ -22,7 +30,7 @@
 使用 Anaconda 虚拟环境（推荐 base 或新建环境）：
 
 ```bash
-cd ConcordCoder
+cd ConcordCoder/ConcordCoder/Code
 # 基础安装（规则模式，无需 API Key）
 pip install -e ".[dev]"
 
@@ -45,6 +53,32 @@ export ANTHROPIC_API_KEY=sk-ant-... # 使用 Anthropic Claude
 ```
 
 ## 用法
+
+### 单任务一次跑通（推荐用于脚本 / CI）
+
+默认**不**跑多轮 LLM 对齐，仅使用抽取阶段得到的约束猜测 + 规则对齐，低延迟；需要完整「批量对齐」时加 `--full-align`。
+
+```bash
+cd /path/to/ConcordCoder/ConcordCoder/Code
+pip install -e ".[dev,openai]"   # 或 anthropic
+
+# 输出目录写入 result.json；markdown 时另有 plan.md；json_files 时另有 files/ 与 raw_model_output.txt
+concord once /path/to/target/repo \
+  -t "实现需求描述" \
+  -o /tmp/concord_out \
+  --format markdown_plan
+
+# 机读 JSON：{"files":[{"path","content"}]}，并解析写入 files/
+concord once /path/to/repo -t "..." -o /tmp/out --format json
+
+# 仅生成 unified diff 文本 → diff.patch
+concord once /path/to/repo -t "..." -o /tmp/out --format diff
+
+# 快路径 + 不跑 LLM 对齐（默认已是快路径；--full-align 才启用 LLM 批量对齐）
+concord once /path/to/repo -t "..." -o /tmp/out --fast
+```
+
+`--format` 可写：`markdown_plan` | `md` | `json` / `json_files` | `diff` / `unified_diff`。
 
 ### Phase 1：仓库上下文抽取
 
@@ -99,7 +133,9 @@ src/concordcoder/
 │
 └── generation/
     ├── stub.py                 # 基础桩（write_plan 工具函数）
-    └── constrained_gen.py      # 约束驱动生成 + 违规检测 + 认知摘要
+    ├── json_output.py          # json_files / diff 输出解析
+    ├── anchor_pipeline.py      # InlineCoder 风格锚点 + 片段组装（可选）
+    └── constrained_gen.py      # 约束驱动生成 + 多输出格式
 ```
 
 ## 测试

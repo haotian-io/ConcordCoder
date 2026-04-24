@@ -8,6 +8,25 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+class OutputFormat(str, Enum):
+    """Machine-readable / presentation output for `concord once`."""
+
+    MARKDOWN_PLAN = "markdown_plan"   # 当前默认：长文本 + 认知摘要
+    JSON_FILES = "json_files"         # 严格 JSON：{"files":[{"path","content"}]}
+    UNIFIED_DIFF = "unified_diff"     # 统一 diff 文本（便于试跑 patch）
+
+
+class ContextDependencyLevel(str, Enum):
+    """CoderEval-style context dependency (short tasks; subset of full 6-level scale)."""
+
+    SELF_CONTAINED = "self-contained"
+    SLIB_RUNNABLE = "slib-runnable"
+    PLIB_RUNNABLE = "plib-runnable"
+    CLASS_RUNNABLE = "class-runnable"
+    FILE_RUNNABLE = "file-runnable"
+    PROJECT_RUNNABLE = "project-runnable"
+
+
 class EvidenceLevel(str, Enum):
     TEST = "test"
     TYPE = "type"
@@ -62,6 +81,14 @@ class ContextBundle(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class AssembledContext(BaseModel):
+    """InlineCoder-style MVP: anchor draft + upstream/downstream snippet windows."""
+
+    anchor_draft: str = ""
+    upstream_snippets: list[SnippetRef] = Field(default_factory=list)
+    downstream_snippets: list[SnippetRef] = Field(default_factory=list)
+
+
 class AlignmentRecord(BaseModel):
     """Output of alignment dialogue, input to constrained generation."""
 
@@ -79,6 +106,15 @@ class GenerationRequest(BaseModel):
     user_request: str
     bundle: ContextBundle
     alignment: AlignmentRecord
+    assembly: AssembledContext | None = None
+    output_format: OutputFormat = Field(default=OutputFormat.MARKDOWN_PLAN)
+
+
+class FileContentItem(BaseModel):
+    """One file in a json_files model output."""
+
+    path: str
+    content: str
 
 
 class GenerationResult(BaseModel):
@@ -89,3 +125,29 @@ class GenerationResult(BaseModel):
     changed_files: list[str] = Field(default_factory=list)
     constraint_compliance: dict[str, bool] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
+    # Populated when output_format is JSON_FILES and parsing succeeds
+    structured_files: list[FileContentItem] = Field(default_factory=list)
+    # Populated for UNIFIED_DIFF when treated as the primary payload
+    unified_diff_text: str = ""
+
+
+class SingleTaskSpec(BaseModel):
+    """Input contract for a single bounded run (e.g. `concord once`)."""
+
+    task_id: str | None = None
+    task: str
+    allowlist_paths: list[str] = Field(default_factory=list)
+    no_align: bool = True
+    full_align: bool = False
+    output_format: OutputFormat = OutputFormat.MARKDOWN_PLAN
+    answers: dict[str, str] = Field(default_factory=dict)
+
+
+class SingleTaskResult(BaseModel):
+    """Output of `run_single_task` including optional parsed artifacts."""
+
+    spec: SingleTaskSpec
+    generation: GenerationResult
+    parsed_files: list[FileContentItem] = Field(default_factory=list)
+    unified_diff: str = ""
+    out_dir: str | None = None

@@ -12,10 +12,25 @@ from rich.panel import Panel
 from rich.table import Table
 
 from concordcoder.extraction.bundle_builder import BundleBuilder
-from concordcoder.pipeline import run_pipeline_and_write
+from concordcoder.pipeline import run_pipeline_and_write, run_single_task, write_single_task_artifacts
+from concordcoder.schemas import OutputFormat, SingleTaskSpec
 
 app = typer.Typer(no_args_is_help=True, help="ConcordCoder: 先对齐认知，再生成代码。")
 console = Console()
+
+
+def _parse_output_format(s: str) -> OutputFormat:
+    m = s.strip().lower().replace("-", "_")
+    if m in ("json", "json_files"):
+        return OutputFormat.JSON_FILES
+    if m in ("diff", "unified_diff", "patch"):
+        return OutputFormat.UNIFIED_DIFF
+    if m in ("md", "markdown", "markdown_plan", "plan"):
+        return OutputFormat.MARKDOWN_PLAN
+    try:
+        return OutputFormat(m)
+    except ValueError:
+        return OutputFormat.MARKDOWN_PLAN
 
 
 def _get_llm(backend: str | None):
@@ -160,6 +175,70 @@ def align(
     for c in record.confirmed_constraints:
         label = "🔴" if c.hard else "🟡"
         console.print(f"  {label} {c.description}")
+
+
+@app.command("once")
+def once(
+    repo: Path = typer.Argument(..., exists=True, file_okay=False, readable=True),
+    task: str = typer.Option(..., "--task", "-t", help="自然语言任务描述"),
+    out_dir: Path = typer.Option(..., "--out-dir", "-o", help="输出目录（写入 result.json 等）"),
+    output_format: str = typer.Option(
+        "markdown_plan",
+        "--format",
+        "-f",
+        help="markdown_plan | json | json_files | unified_diff | diff",
+    ),
+    full_align: bool = typer.Option(
+        False,
+        "--full-align",
+        help="启用 LLM 批量认知对齐（默认关闭以走快路径）",
+    ),
+    fast: bool = typer.Option(
+        False,
+        "--fast",
+        help="轻量抽取：缩小 AST 扫描、跳过 Git 与测试分析",
+    ),
+    allowlist: str = typer.Option("", "--allowlist", help="可修改文件路径，逗号分隔"),
+    task_id: str | None = typer.Option(None, "--id", help="可选任务 ID（写入 spec）"),
+    backend: str | None = typer.Option(None, "--backend", "-b", help="openai 或 anthropic"),
+):
+    """单任务一次跑通：轻量对齐（默认）→ 约束生成 → 可解析产出写入 --out-dir。"""
+    fmt = _parse_output_format(output_format)
+    alist = [p.strip() for p in allowlist.split(",") if p.strip()]
+
+    spec = SingleTaskSpec(
+        task_id=task_id,
+        task=task,
+        allowlist_paths=alist,
+        no_align=not full_align,
+        full_align=full_align,
+        output_format=fmt,
+        answers={},
+    )
+
+    console.print(
+        Panel(
+            f"[bold cyan]once[/bold cyan]  format={fmt.value}  full_align={full_align}  fast={fast}\nout: {out_dir}",
+            expand=False,
+        )
+    )
+
+    llm = _get_llm(backend)
+    if llm:
+        console.print(f"[green]LLM: {llm.backend.upper()} ({llm.model})[/green]")
+    else:
+        console.print("[yellow]无 LLM：将写 stub 到 result（仍生成 result.json，便于脚本接 CI）[/yellow]")
+
+    st = run_single_task(
+        repo,
+        spec,
+        llm_client=llm,
+        fast_extract=fast,
+    )
+    path = write_single_task_artifacts(st, out_dir)
+    console.print(f"\n[bold green]✅ 已写入: {path}[/bold green]")
+    if (path / "result.json").is_file():
+        console.print(f"  [dim]→ {path / 'result.json'}[/dim]")
 
 
 def main() -> None:

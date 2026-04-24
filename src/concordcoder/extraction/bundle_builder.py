@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 from concordcoder.extraction.ast_analyzer import ASTAnalyzer
 from concordcoder.extraction.call_graph import CallGraphBuilder
 from concordcoder.extraction.git_historian import GitHistorian
+from concordcoder.extraction.symbol_resolve import find_function_for_symbol, symbol_tokens
 from concordcoder.extraction.test_extractor import TestExtractor
 from concordcoder.schemas import (
     Constraint,
@@ -38,11 +40,17 @@ class BundleBuilder:
         max_files: int = 120,
         max_snippet_chars: int = 1200,
         llm_client=None,   # optional: LLMClient instance for layer-4 summarisation
+        target_file: str | None = None,
+        target_symbol: str | None = None,
+        fast: bool = False,
     ) -> None:
         self.repo_root = Path(repo_root).resolve()
         self.max_files = max_files
         self.max_snippet_chars = max_snippet_chars
         self.llm_client = llm_client
+        self.target_file = target_file.replace("\\", "/") if target_file else None
+        self.target_symbol = target_symbol
+        self.fast = fast
 
     # ------------------------------------------------------------------
     # Public API
@@ -50,13 +58,16 @@ class BundleBuilder:
 
     def build(self, task_text: str) -> ContextBundle:
         tokens = self._tokens(task_text)
+        if self.target_symbol:
+            tokens = set(tokens) | symbol_tokens(self.target_symbol)
 
         # ---- Layer 0: keyword snippet retrieval ----
         snippets = self._keyword_snippets(tokens)
 
         # ---- Layer 1: AST + call graph ----
         analyzer = ASTAnalyzer()
-        analyses = analyzer.analyze_repo(self.repo_root, max_files=self.max_files)
+        eff_max = min(40, self.max_files) if self.fast else self.max_files
+        analyses = analyzer.analyze_repo(self.repo_root, max_files=eff_max)
         cg_builder = CallGraphBuilder()
         cg_builder.build(self.repo_root, analyses)
 
@@ -66,8 +77,16 @@ class BundleBuilder:
         design_constraints = self._constraints_from_ast(analyses, tokens)
 
         # ---- Layer 2: git history ----
-        historian = GitHistorian(self.repo_root)
-        git_analysis = historian.analyze(max_commits=80)
+        if self.fast:
+            git_analysis = SimpleNamespace(
+                available=False,
+                error="fast 模式已跳过",
+                design_decisions=[],
+                hotspot_files=[],
+            )
+        else:
+            historian = GitHistorian(self.repo_root)
+            git_analysis = historian.analyze(max_commits=80)
         historical_decisions = []
         if git_analysis.available:
             historical_decisions = git_analysis.design_decisions
@@ -77,8 +96,15 @@ class BundleBuilder:
                 )
 
         # ---- Layer 3: test file analysis ----
-        test_extractor = TestExtractor()
-        test_analysis = test_extractor.analyze_repo(self.repo_root)
+        if self.fast:
+            test_analysis = SimpleNamespace(
+                expectations=[],
+                fixture_names=[],
+                test_files=[],
+            )
+        else:
+            test_extractor = TestExtractor()
+            test_analysis = test_extractor.analyze_repo(self.repo_root)
         test_expectations = [
             f"[{e.test_file}::{e.test_name}] {e.description}"
             for e in test_analysis.expectations[:20]
@@ -92,6 +118,33 @@ class BundleBuilder:
                 f"测试文件 ({len(test_analysis.test_files)} 个): "
                 + ", ".join(test_analysis.test_files[:5])
             )
+
+        call_graph_dict = cg_builder.to_dict()
+        metadata_narrow: dict = {
+            "builder": "multi_layer_v1",
+            "files_scanned": len(analyses),
+            "test_files": len(test_analysis.test_files),
+            "git_available": git_analysis.available,
+            "fast": self.fast,
+        }
+
+        # ---- Optional: narrow scope to one file + symbol (single-task mode) ----
+        if self.target_file and self.target_symbol:
+            structural_facts.insert(
+                0,
+                f"收窄模式：目标符号 `{self.target_symbol}` 于 `{self.target_file}`",
+            )
+            snippets, call_graph_dict = self._apply_narrow_scope(
+                analyses,
+                cg_builder,
+                snippets,
+                call_graph_dict,
+            )
+            metadata_narrow["narrow_mode"] = True
+            metadata_narrow["target_file"] = self.target_file
+            metadata_narrow["target_symbol"] = self.target_symbol
+        else:
+            metadata_narrow["narrow_mode"] = False
 
         # ---- Open questions ----
         open_q: list[str] = []
@@ -111,22 +164,76 @@ class BundleBuilder:
             design_constraints=design_constraints,
             risks=risks,
             open_questions=open_q,
-            call_graph=cg_builder.to_dict(),
+            call_graph=call_graph_dict,
             entry_points=entry_points,
             historical_decisions=historical_decisions,
             test_expectations=test_expectations,
             affected_modules=affected_modules,
-            metadata={
-                "builder": "multi_layer_v1",
-                "files_scanned": len(analyses),
-                "test_files": len(test_analysis.test_files),
-                "git_available": git_analysis.available,
-            },
+            metadata=metadata_narrow,
         )
 
     # ------------------------------------------------------------------
     # Layer helpers
     # ------------------------------------------------------------------
+
+    def _apply_narrow_scope(
+        self,
+        analyses: dict,
+        cg_builder: CallGraphBuilder,
+        snippets: list[SnippetRef],
+        call_graph_dict: dict[str, list[str]],
+    ) -> tuple[list[SnippetRef], dict[str, list[str]]]:
+        assert self.target_file and self.target_symbol
+        tf = self.target_file
+        fn = find_function_for_symbol(analyses, tf, self.target_symbol)
+        priority: set[str] = {tf}
+        priority |= set(cg_builder.get_dependents(tf))
+        priority |= set(cg_builder.get_dependencies(tf))
+        new_snippets: list[SnippetRef] = []
+        for rel in sorted(priority):
+            a = analyses.get(rel)
+            if not a:
+                continue
+            path = self.repo_root / rel
+            if not path.is_file():
+                continue
+            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+            if not lines:
+                continue
+            if rel == tf and fn is not None:
+                start = max(0, fn.start_line - 2)
+                end = min(len(lines), fn.end_line + 2)
+            else:
+                key = self.target_symbol.split(".")[-1].lower()
+                hit = next((i for i, line in enumerate(lines) if key in line.lower()), 0)
+                start = max(0, hit - 3)
+                end = min(len(lines), hit + 22)
+            text = "\n".join(lines[start:end])
+            if len(text) > self.max_snippet_chars:
+                text = text[: self.max_snippet_chars] + "\n…"
+            new_snippets.append(
+                SnippetRef(
+                    path=rel,
+                    start_line=start + 1,
+                    end_line=end,
+                    text=text,
+                    evidence_level=EvidenceLevel.IMPLEMENTATION,
+                    relevance_score=100.0 if rel == tf else 55.0,
+                )
+            )
+        if not new_snippets:
+            for s in snippets:
+                if s.path in priority or s.path.replace("\\", "/") in priority:
+                    new_snippets.append(s)
+        if not new_snippets:
+            new_snippets = snippets
+        sub: dict[str, list[str]] = {}
+        for k, v in call_graph_dict.items():
+            if k in priority:
+                sub[k] = [d for d in v if d in priority]
+        for k in priority:
+            sub.setdefault(k, [d for d in call_graph_dict.get(k, []) if d in priority])
+        return new_snippets, sub
 
     @staticmethod
     def _tokens(text: str) -> set[str]:

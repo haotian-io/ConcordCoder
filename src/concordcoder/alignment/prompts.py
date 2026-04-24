@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from concordcoder.schemas import ContextBundle
+from concordcoder.schemas import ContextBundle, OutputFormat
 
 # ---------------------------------------------------------------------------
 # System Prompts
@@ -57,6 +57,24 @@ SYSTEM_CODE_GENERATOR = """\
 **已处理的风险：** ...
 **仍需关注：** ...
 **建议验证步骤：** 1. ... 2. ...
+"""
+
+SYSTEM_JSON_CODE_GENERATOR = """\
+你是约束感知的代码生成助手。你的回复必须是**单个 JSON 对象**（可放在 ```json 代码块中），
+除此之外不要输出其他文字。Schema：
+{
+  "files": [ { "path": "相对仓库根的路径", "content": "文件完整内容" } ],
+  "cognitive_summary": "简短说明与约束/风险的对应"
+}
+1. 遵守用户消息中 <constraints>、<allowlist>、<acceptance_criteria>。
+2. 每个 path 使用正斜杠；content 为 UTF-8 完整文件文本。
+3. 若仅改一个文件，files 也必须是长度为 1 的数组。
+"""
+
+SYSTEM_UNIFIED_DIFF_GENERATOR = """\
+你是约束感知的代码生成助手。只输出一个 **unified diff**（git 风格，以 diff --git 或 ---/+++ 开头），
+可放在 ```diff 代码块中。除 diff 与可选的简短 ``` 围栏外不要输出其他解释文字。
+所给 diff 必须只触及 <allowlist> 允许的路径；遵守 <constraints> 与 <acceptance_criteria>。
 """
 
 
@@ -138,6 +156,7 @@ def build_constrained_generation_prompt(
     acceptance_criteria: list[str],
     implementation_choice: str = "",
     context_snippets: list[dict] | None = None,
+    anchor_draft: str = "",
 ) -> str:
     """Phase C: constrained code generation prompt."""
     parts = [f"## 任务\n{task}\n"]
@@ -170,6 +189,10 @@ def build_constrained_generation_prompt(
     if implementation_choice:
         parts.append(f"## 用户选择的实现方案\n{implementation_choice}\n")
 
+    if anchor_draft:
+        parts.append("## 锚点草稿 (InlineCoder 风格; 可能不完美，请在对齐后的约束下修正)\n")
+        parts.append(f"```python\n{anchor_draft[:4000]}\n```\n")
+
     if context_snippets:
         parts.append("## 相关现有代码")
         for snip in context_snippets[:5]:
@@ -179,3 +202,61 @@ def build_constrained_generation_prompt(
     parts.append("\n请生成满足上述约束的代码，并在末尾附上认知摘要（## 实现摘要）。")
 
     return "\n".join(parts)
+
+
+def build_json_files_prompt(
+    task: str,
+    hard_constraints: list[str],
+    allowlist: list[str],
+    acceptance_criteria: list[str],
+    implementation_choice: str = "",
+    context_snippets: list[dict] | None = None,
+    anchor_draft: str = "",
+) -> str:
+    """Same context as markdown mode; output instruction differs."""
+    base = build_constrained_generation_prompt(
+        task=task,
+        hard_constraints=hard_constraints,
+        allowlist=allowlist,
+        acceptance_criteria=acceptance_criteria,
+        implementation_choice=implementation_choice,
+        context_snippets=context_snippets,
+        anchor_draft=anchor_draft,
+    )
+    return (
+        base
+        + "\n\n**输出要求**：不要按上文“认知摘要”段落格式输出。改为仅输出 JSON 对象，"
+        "键 files（数组）与 cognitive_summary（字符串），见 system 中的 schema。"
+    )
+
+
+def build_unified_diff_prompt(
+    task: str,
+    hard_constraints: list[str],
+    allowlist: list[str],
+    acceptance_criteria: list[str],
+    implementation_choice: str = "",
+    context_snippets: list[dict] | None = None,
+    anchor_draft: str = "",
+) -> str:
+    base = build_constrained_generation_prompt(
+        task=task,
+        hard_constraints=hard_constraints,
+        allowlist=allowlist,
+        acceptance_criteria=acceptance_criteria,
+        implementation_choice=implementation_choice,
+        context_snippets=context_snippets,
+        anchor_draft=anchor_draft,
+    )
+    return (
+        base
+        + "\n\n**输出要求**：不要生成完整文件正文。只输出一个 unified diff，覆盖需要修改的文件。"
+    )
+
+
+def system_prompt_for_output_format(fmt: OutputFormat) -> str:
+    if fmt == OutputFormat.JSON_FILES:
+        return SYSTEM_JSON_CODE_GENERATOR
+    if fmt == OutputFormat.UNIFIED_DIFF:
+        return SYSTEM_UNIFIED_DIFF_GENERATOR
+    return SYSTEM_CODE_GENERATOR
