@@ -1,4 +1,4 @@
-"""run_single_task with use_anchor and with_probe (no LLM)."""
+"""run_single_task with use_anchor and with_probe."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import pytest
 
 from concordcoder.pipeline import run_single_task
 from concordcoder.schemas import OutputFormat, SingleTaskSpec
+from tests.conftest import StubLLM
 
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "repos" / "tasklab"
 
@@ -22,7 +23,11 @@ def test_run_single_task_with_anchor_fills_assembly() -> None:
         with_probe=True,
         output_format=OutputFormat.MARKDOWN_PLAN,
     )
-    st = run_single_task(FIXTURE, spec, llm_client=None, fast_extract=True)
+    st = run_single_task(
+        FIXTURE,
+        spec,
+        llm_client=StubLLM(),
+        fast_extract=True,
+    )
     assert st.probe.get("n_probes") is not None
-    # ConstrainedGenerator runs without LLM: stub, but assembly was passed
-    assert "LLM" in st.generation.warnings[0] or st.generation.warnings
+    assert st.generation.code_plan

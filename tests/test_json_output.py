@@ -70,16 +70,17 @@ def test_constrained_gen_json_mode_mock_llm() -> None:
     assert "print(1)" in r.structured_files[0].content
 
 
-def test_run_single_task_fast_no_llm(tmp_path: Path) -> None:
+def test_run_single_task_fast_with_stub_llm(tmp_path: Path) -> None:
+    from tests.conftest import StubLLM
+
     (tmp_path / "hi.py").write_text("a = 1\n", encoding="utf-8")
     spec = SingleTaskSpec(
         task="change nothing",
         full_align=False,
         output_format=OutputFormat.MARKDOWN_PLAN,
     )
-    st = run_single_task(tmp_path, spec, llm_client=None, fast_extract=True)
-    assert st.generation.warnings
+    st = run_single_task(tmp_path, spec, llm_client=StubLLM(), fast_extract=True)
     out = write_single_task_artifacts(st, tmp_path / "out")
     assert (out / "result.json").is_file()
     row = json.loads((out / "result.json").read_text(encoding="utf-8"))
-    assert row["generation"]["warnings"]
+    assert row["generation"]["code_plan"]

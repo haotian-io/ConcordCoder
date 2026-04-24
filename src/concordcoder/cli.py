@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import typer
@@ -33,21 +32,43 @@ def _parse_output_format(s: str) -> OutputFormat:
         return OutputFormat.MARKDOWN_PLAN
 
 
-def _get_llm(backend: str | None):
-    """Initialize LLMClient if API key is available."""
-    if backend is None:
-        if os.environ.get("OPENAI_API_KEY"):
-            backend = "openai"
-        elif os.environ.get("ANTHROPIC_API_KEY"):
-            backend = "anthropic"
-        else:
-            return None
+@app.command("doctor")
+def doctor(
+    backend: str | None = typer.Option(
+        None,
+        "--backend",
+        "-b",
+        help="openai 或 anthropic；未指定时按环境变量自动选择",
+    ),
+):
+    """检查 API Key 与可选 OPENAI_BASE_URL 能否初始化 LLM 客户端（不发聊天请求）。"""
+    from concordcoder.llm_client import get_llm_client
+
     try:
-        from concordcoder.llm_client import LLMClient
-        return LLMClient(backend=backend)
-    except Exception as e:
-        console.print(f"[yellow]⚠️  LLM 初始化失败: {e}，使用规则模式。[/yellow]")
-        return None
+        llm = get_llm_client(backend=backend)
+    except (EnvironmentError, ImportError, ValueError) as e:
+        console.print(f"[red]未就绪: {e}[/red]")
+        console.print(
+            "[dim]提示: `concord extract` 可在无 Key 下仅做 Phase 1 静态分析; "
+            "`run` / `once` / `align` 需要 Key。[/dim]"
+        )
+        raise typer.Exit(1) from e
+    bu = (llm.backend or "").upper()
+    console.print(
+        f"[green]LLM 客户端已创建[/green]  backend={bu}  model={llm.model}\n"
+        "[dim]本命令不发起网络请求；若 API 或网络异常将在首次 `chat` 时体现。[/dim]"
+    )
+
+
+def _require_llm(backend: str | None):
+    """Load LLM client or exit 1 (generation and align require a real API)."""
+    from concordcoder.llm_client import get_llm_client
+
+    try:
+        return get_llm_client(backend=backend)
+    except (EnvironmentError, ImportError, ValueError) as e:
+        console.print(f"[red]LLM 不可用: {e}[/red]")
+        raise typer.Exit(1) from e
 
 
 @app.command()
@@ -133,11 +154,8 @@ def run(
         )
     )
 
-    llm = _get_llm(backend)
-    if llm:
-        console.print(f"[green]✅ LLM 已连接: {llm.backend.upper()} ({llm.model})[/green]")
-    else:
-        console.print("[yellow]⚡ 规则模式（无 LLM），设置 OPENAI_API_KEY 启用完整功能[/yellow]")
+    llm = _require_llm(backend)
+    console.print(f"[green]✅ LLM 已连接: {llm.backend.upper()} ({llm.model})[/green]")
 
     path = run_pipeline_and_write(
         repo_root=repo,
@@ -161,7 +179,7 @@ def align(
     """【Phase 2 only】只运行认知对齐对话（不生成代码），用于调试/研究。"""
     from concordcoder.alignment.llm_dialogue import LLMAlignmentDialogue
 
-    llm = _get_llm(backend)
+    llm = _require_llm(backend)
     builder = BundleBuilder(repo)
     bundle = builder.build(task)
 
@@ -249,11 +267,8 @@ def once(
         )
     )
 
-    llm = _get_llm(backend)
-    if llm:
-        console.print(f"[green]LLM: {llm.backend.upper()} ({llm.model})[/green]")
-    else:
-        console.print("[yellow]无 LLM：将写 stub 到 result（仍生成 result.json，便于脚本接 CI）[/yellow]")
+    llm = _require_llm(backend)
+    console.print(f"[green]LLM: {llm.backend.upper()} ({llm.model})[/green]")
 
     st = run_single_task(
         repo,

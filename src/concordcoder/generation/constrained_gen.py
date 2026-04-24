@@ -41,7 +41,10 @@ class ConstrainedGenerator:
 
     def generate(self, req: GenerationRequest) -> GenerationResult:
         if not self.llm:
-            return self._fallback_stub(req)
+            raise RuntimeError(
+                "LLM client is required. Set OPENAI_API_KEY (and optional OPENAI_BASE_URL) "
+                "or ANTHROPIC_API_KEY, or pass an LLMClient instance."
+            )
 
         hard_descriptions = [
             c.description for c in req.alignment.confirmed_constraints if c.hard
@@ -249,40 +252,3 @@ class ConstrainedGenerator:
                 changed.append(snip.path)
         return changed[:10]
 
-    # ------------------------------------------------------------------
-    # Fallback (no LLM)
-    # ------------------------------------------------------------------
-
-    def _fallback_stub(self, req: GenerationRequest) -> GenerationResult:
-        hard = [c for c in req.alignment.confirmed_constraints if c.hard]
-        hard_lines = "\n".join(f"  - [{c.id}] {c.description}" for c in hard) or "  （无）"
-        mode = req.output_format.value
-
-        stub = f"""\
-# ConcordCoder 约束感知生成桩（无 LLM 模式）
-# 任务: {req.user_request}
-# 请求输出格式: {mode}
-
-# ── 已确认的硬约束 ──────────────────────────
-{hard_lines}
-
-# ── 允许修改的文件 ──────────────────────────
-{chr(10).join('  # - ' + p for p in req.alignment.allowlist_paths) or '  # （未指定）'}
-
-# ── 验收标准 ────────────────────────────────
-{chr(10).join('  # - ' + c for c in req.alignment.test_acceptance_criteria)}
-
-# 请配置 OPENAI_API_KEY 或 ANTHROPIC_API_KEY 后重试
-raise NotImplementedError("LLM 未配置")
-
-## 实现摘要
-无 LLM：无法生成 {mode} 内容。
-"""
-        w = [f"LLM 未配置，返回桩；期望格式 {mode}。设置环境变量以启用。"]
-        return GenerationResult(
-            code_plan=stub,
-            cognitive_summary="无 LLM 模式。",
-            changed_files=[],
-            constraint_compliance={c.id: False for c in req.alignment.confirmed_constraints},
-            warnings=w,
-        )

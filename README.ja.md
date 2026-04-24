@@ -41,11 +41,21 @@ pip install -e ".[git]"
 pip install -e ".[dev,all]"
 ```
 
+## ドキュメント
+
+- **[USAGE.md](USAGE.md)** — デモ手順・ユーザ研究の注意・研究ロードマップへの案内。  
+- 初回は **`concord doctor`** で API キーとクライアント初期化を確認（チャットは送りません）。
+
 ## 環境変数
+
+**`concord run` / `once` / `align` および `scripts/mini_eval.py` は LLM 必須**です。`OPENAI_API_KEY` または `ANTHROPIC_API_KEY` を設定してください。未設定の場合は**エラー終了**します（生成スタブはありません）。
+
+**OpenAI 互換 API** では次のようにエンドポイントを指定します（提供元の手順に合わせて `/v1` の要否を調整）:
 
 ```bash
 export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_BASE_URL=https://example.com/v1
+# export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ## 使い方

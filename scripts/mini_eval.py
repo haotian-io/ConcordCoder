@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Mini evaluation: fixture tasklab × baseline variants, JSON to stdout.
-Does not require LLM keys: measures structure (probe, warnings, turn_log in full_align path N/A here).
+Requires the same API keys as ``concord once`` (OPENAI_API_KEY and optional OPENAI_BASE_URL).
 
 The printed JSON matches the paper (§Evaluation, RQ1, artifact-backed driver):
   Top level: "fixture_repo", "rows"
@@ -29,6 +29,7 @@ _CODE_ROOT = Path(__file__).resolve().parent.parent
 if str(_CODE_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_CODE_ROOT / "src"))
 
+from concordcoder.llm_client import get_llm_client  # noqa: E402
 from concordcoder.pipeline import run_single_task  # noqa: E402
 from concordcoder.schemas import OutputFormat, SingleTaskSpec  # noqa: E402
 from concordcoder.single_task import load_task_spec  # noqa: E402
@@ -64,6 +65,12 @@ def main() -> None:
 
     pyt = _pytest_summary(repo)
 
+    try:
+        llm = get_llm_client()
+    except EnvironmentError as e:
+        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        sys.exit(1)
+
     variants = [
         ("narrow_no_anchor", False, False),
         ("with_anchor", True, False),
@@ -84,7 +91,7 @@ def main() -> None:
                 output_format=OutputFormat.MARKDOWN_PLAN,
                 answers=ft.alignment_answers,
             )
-            st = run_single_task(repo, spec, llm_client=None, fast_extract=True)
+            st = run_single_task(repo, spec, llm_client=llm, fast_extract=True)
             rows.append(
                 {
                     "task_id": ft.id,

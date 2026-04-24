@@ -7,6 +7,27 @@ import os
 from typing import Any
 
 
+def get_llm_client(backend: str | None = None) -> "LLMClient":
+    """Construct an ``LLMClient`` or raise if no API key / init fails.
+
+    Resolves ``backend`` from env when omitted: ``OPENAI_API_KEY`` → openai,
+    else ``ANTHROPIC_API_KEY`` → anthropic.
+
+    For OpenAI-compatible proxies, set ``OPENAI_BASE_URL`` (e.g. ``https://host/v1``).
+    """
+    if backend is None:
+        if os.environ.get("OPENAI_API_KEY"):
+            backend = "openai"
+        elif os.environ.get("ANTHROPIC_API_KEY"):
+            backend = "anthropic"
+        else:
+            raise EnvironmentError(
+                "No LLM API key set. Set OPENAI_API_KEY or ANTHROPIC_API_KEY "
+                "(and optional OPENAI_BASE_URL for OpenAI-compatible endpoints)."
+            )
+    return LLMClient(backend=backend)
+
+
 class LLMClient:
     """Thin wrapper around OpenAI / Anthropic APIs.
 
@@ -68,6 +89,9 @@ class LLMClient:
             api_key = os.environ.get("OPENAI_API_KEY")
             if not api_key:
                 raise EnvironmentError("OPENAI_API_KEY not set.")
+            base_url = os.environ.get("OPENAI_BASE_URL")
+            if base_url:
+                return OpenAI(api_key=api_key, base_url=base_url)
             return OpenAI(api_key=api_key)
         except ImportError:
             raise ImportError("openai not installed. Run: pip install openai")
@@ -77,12 +101,15 @@ class LLMClient:
         if system:
             all_messages.append({"role": "system", "content": system})
         all_messages.extend(messages)
-        response = self._client.chat.completions.create(
-            model=self.model,
-            messages=all_messages,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-        )
+        try:
+            response = self._client.chat.completions.create(
+                model=self.model,
+                messages=all_messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )
+        except Exception as e:
+            raise RuntimeError(f"OpenAI API request failed: {e}") from e
         return response.choices[0].message.content or ""
 
     def _init_anthropic(self):
@@ -96,11 +123,14 @@ class LLMClient:
             raise ImportError("anthropic not installed. Run: pip install anthropic")
 
     def _anthropic_chat(self, messages: list[dict[str, str]], system: str) -> str:
-        response = self._client.messages.create(
-            model=self.model,
-            system=system or "You are a helpful coding assistant.",
-            messages=messages,
-            temperature=self.temperature,
-            max_tokens=self.max_tokens,
-        )
+        try:
+            response = self._client.messages.create(
+                model=self.model,
+                system=system or "You are a helpful coding assistant.",
+                messages=messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )
+        except Exception as e:
+            raise RuntimeError(f"Anthropic API request failed: {e}") from e
         return response.content[0].text if response.content else ""

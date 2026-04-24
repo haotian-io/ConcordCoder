@@ -41,11 +41,21 @@ pip install -e ".[git]"
 pip install -e ".[dev,all]"
 ```
 
+## 文档索引
+
+- **[USAGE.md](USAGE.md)**：试用说明、外测与问卷、研究路线索引。  
+- 首次检查 API 配置：运行 **`concord doctor`**（只初始化客户端，不发起聊天请求）。
+
 ## 环境变量
+
+**`concord run` / `once` / `align` 以及 `scripts/mini_eval.py` 必须能访问 LLM**：需设置 `OPENAI_API_KEY`（或 `ANTHROPIC_API_KEY`），否则进程会**直接退出**；不再提供无 Key 的生成桩。
+
+使用 **OpenAI 兼容中转** 时设置基址（示例，按服务商文档调整是否带 `/v1`）：
 
 ```bash
 export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-ant-...
+export OPENAI_BASE_URL=https://example.com/v1
+# export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ## 用法

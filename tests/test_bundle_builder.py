@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 
 from concordcoder.extraction.ast_analyzer import ASTAnalyzer
 from concordcoder.extraction.bundle_builder import BundleBuilder
@@ -191,7 +192,7 @@ def test_alignment_dialogue_basic(tmp_path: Path) -> None:
 
 # ── GenerationResult & ConstrainedGenerator stub mode ───────────────────────
 
-def test_constrained_generator_stub(tmp_path: Path) -> None:
+def test_constrained_generator_requires_llm(tmp_path: Path) -> None:
     from concordcoder.generation.constrained_gen import ConstrainedGenerator
     from concordcoder.schemas import (
         AlignmentRecord,
@@ -213,25 +214,26 @@ def test_constrained_generator_stub(tmp_path: Path) -> None:
         bundle=bundle,
         alignment=alignment,
     )
-    gen = ConstrainedGenerator(llm_client=None)  # No LLM → stub mode
-    result = gen.generate(req)
-    assert result.code_plan
-    assert "LLM" in result.warnings[0] or "stub" in result.code_plan.lower()
+    gen = ConstrainedGenerator(llm_client=None)
+    with pytest.raises(RuntimeError, match="LLM client is required"):
+        gen.generate(req)
 
 
 # ── Pipeline smoke test ──────────────────────────────────────────────────────
 
 def test_pipeline_end_to_end(tmp_path: Path) -> None:
     from concordcoder.pipeline import run_pipeline_and_write
+    from tests.conftest import StubLLM
 
     (tmp_path / "payment.py").write_text(
         "def handle_payment(user_id):\n    pass\n", encoding="utf-8"
     )
+    long_reply = "# " + "x" * 60 + "\n\n## Summary\nok.\n" + "```python\npass\n```"
     plan_path = run_pipeline_and_write(
         repo_root=tmp_path,
         task_text="add retry logic to handle_payment",
         plan_name="TEST_PLAN.md",
-        llm_client=None,
+        llm_client=StubLLM(reply=long_reply),
     )
     assert plan_path.exists()
     content = plan_path.read_text()

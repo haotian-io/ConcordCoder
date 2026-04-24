@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from concordcoder.extraction.ast_analyzer import FileAnalysis, FunctionInfo
+from concordcoder.extraction.ast_analyzer import FileAnalysis
 from concordcoder.extraction.call_graph import CallGraphBuilder
 from concordcoder.extraction.symbol_resolve import find_function_for_symbol
 from concordcoder.schemas import AssembledContext, EvidenceLevel, SnippetRef
@@ -20,11 +20,6 @@ ANCHOR_SYSTEM = """\
 """
 
 
-def _signature_stub(fn: FunctionInfo) -> str:
-    args = ", ".join(fn.args)
-    return f"def {fn.name}({args}):\n    raise NotImplementedError  # anchor\n"
-
-
 def draft_anchor(
     target_file: str,
     target_symbol: str,
@@ -36,7 +31,9 @@ def draft_anchor(
     if not fn:
         return f"# anchor: could not resolve {target_symbol!r} in {target_file}"
     if not llm_client:
-        return _signature_stub(fn)
+        raise ValueError(
+            "draft_anchor requires an LLM client when use_anchor is enabled; set API keys or pass LLMClient."
+        )
 
     args = ", ".join(fn.args)
     qual = fn.qualname
@@ -47,14 +44,11 @@ def draft_anchor(
         f"起止行: {fn.start_line}-{fn.end_line}\n"
         "请只输出可替换进文件的一段草稿实现（方法体或函数体），使用 pass/TODO/raise 均可。"
     )
-    try:
-        out = llm_client.chat(
-            [{"role": "user", "content": prompt}],
-            system=ANCHOR_SYSTEM,
-        )
-        return out.strip()
-    except Exception:
-        return _signature_stub(fn)
+    out = llm_client.chat(
+        [{"role": "user", "content": prompt}],
+        system=ANCHOR_SYSTEM,
+    )
+    return out.strip()
 
 
 def assemble_inlinecoder_mvp(

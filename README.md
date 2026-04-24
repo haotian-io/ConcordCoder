@@ -44,11 +44,21 @@ pip install -e ".[git]"
 pip install -e ".[dev,all]"
 ```
 
+## Documentation
+
+- **[USAGE.md](USAGE.md)** — index to demo notes, user-study tips, and research checklist.
+- First-time API check: `concord doctor` (verifies keys / client init; no chat call).
+
 ## Environment variables
 
+**`concord run` / `once` / `align` and `scripts/mini_eval.py` require an LLM**: set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`; the CLI exits with an error if neither is available (no stub generation).
+
+For **OpenAI-compatible proxies**, set the API base URL (adjust path per your provider, often ending in `/v1`):
+
 ```bash
-export OPENAI_API_KEY=sk-...         # OpenAI
-export ANTHROPIC_API_KEY=sk-ant-...  # Anthropic
+export OPENAI_API_KEY=sk-...
+export OPENAI_BASE_URL=https://example.com/v1
+# export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
 ## Usage

@@ -26,18 +26,12 @@ def run_pipeline(
     llm_client=None,
     interactive: bool = False,
 ) -> GenerationResult:
-    """Full ConcordCoder pipeline.
-
-    Args:
-        repo_root: Path to the repository root.
-        task_text: Natural language task description.
-        answers: Pre-filled answers for batch/non-interactive use.
-        llm_client: Optional LLMClient instance. If None, uses rule-based fallbacks.
-        interactive: If True, start interactive terminal dialogue for alignment.
-
-    Returns:
-        GenerationResult with code, cognitive summary, and compliance report.
-    """
+    """Full ConcordCoder pipeline. ``llm_client`` is required (set API keys or pass an instance)."""
+    if llm_client is None:
+        raise ValueError(
+            "llm_client is required for run_pipeline. Set OPENAI_API_KEY (and optional "
+            "OPENAI_BASE_URL) or ANTHROPIC_API_KEY, or pass an LLMClient instance."
+        )
     repo_root = Path(repo_root).resolve()
 
     # ── Phase 1: Context Extraction ──────────────────────────────
@@ -45,16 +39,12 @@ def run_pipeline(
     bundle = builder.build(task_text)
 
     # ── Phase 2: Alignment Dialogue ───────────────────────────────
-    if interactive and llm_client is not None:
+    if interactive:
         dialogue = LLMAlignmentDialogue(llm_client=llm_client)
         alignment = dialogue.run_interactive(bundle)
-    elif llm_client is not None:
+    else:
         dialogue = LLMAlignmentDialogue(llm_client=llm_client)
         alignment = dialogue.run_batch(bundle, prefilled_answers=answers)
-    else:
-        # Fallback: rule-based dialogue (no LLM)
-        legacy = AlignmentDialogue()
-        alignment = legacy.draft_record(bundle, answers)
 
     # ── Phase 3: Constrained Generation ──────────────────────────
     req = GenerationRequest(
@@ -78,6 +68,11 @@ def run_single_task(
     fast_extract: bool = False,
 ) -> SingleTaskResult:
     """Single bounded run: light alignment by default (``no_align`` / ``full_align`` in ``spec``)."""
+    if llm_client is None:
+        raise ValueError(
+            "llm_client is required for run_single_task. Set OPENAI_API_KEY (and optional "
+            "OPENAI_BASE_URL) or ANTHROPIC_API_KEY, or pass an LLMClient instance."
+        )
     repo_root = Path(repo_root).resolve()
 
     eff_max_files = min(40, 120) if fast_extract else 120
@@ -91,7 +86,7 @@ def run_single_task(
     )
     bundle = builder.build(spec.task)
 
-    if spec.full_align and llm_client is not None:
+    if spec.full_align:
         dialogue = LLMAlignmentDialogue(llm_client=llm_client)
         alignment = dialogue.run_batch(bundle, prefilled_answers=spec.answers)
     else:
