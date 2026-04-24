@@ -201,6 +201,26 @@ def once(
     allowlist: str = typer.Option("", "--allowlist", help="可修改文件路径，逗号分隔"),
     task_id: str | None = typer.Option(None, "--id", help="可选任务 ID（写入 spec）"),
     backend: str | None = typer.Option(None, "--backend", "-b", help="openai 或 anthropic"),
+    target_file: str | None = typer.Option(
+        None,
+        "--target-file",
+        help="收窄上下文并配合锚点：仓库内相对路径，如 tasklab/vowels.py",
+    ),
+    target_symbol: str | None = typer.Option(
+        None,
+        "--symbol",
+        help="目标符号，如 count_vowels 或 RunningTotal.add",
+    ),
+    use_anchor: bool = typer.Option(
+        False,
+        "--use-anchor",
+        help="InlineCoder 式：签名为锚的草稿 + 上下游片段，填入生成上下文",
+    ),
+    with_probe: bool = typer.Option(
+        False,
+        "--with-probe",
+        help="在锚点草稿上跑 ProbingEngine（mock logprobs；需 --use-anchor）",
+    ),
 ):
     """单任务一次跑通：轻量对齐（默认）→ 约束生成 → 可解析产出写入 --out-dir。"""
     fmt = _parse_output_format(output_format)
@@ -214,11 +234,17 @@ def once(
         full_align=full_align,
         output_format=fmt,
         answers={},
+        target_file=target_file.replace("\\", "/") if target_file else None,
+        target_symbol=target_symbol,
+        use_anchor=use_anchor,
+        with_probe=with_probe,
     )
 
+    ac = f" anchor={use_anchor}" if use_anchor else ""
+    sym = f" {target_file}:{target_symbol}" if target_file and target_symbol else ""
     console.print(
         Panel(
-            f"[bold cyan]once[/bold cyan]  format={fmt.value}  full_align={full_align}  fast={fast}\nout: {out_dir}",
+            f"[bold cyan]once[/bold cyan]  format={fmt.value}  full_align={full_align}  fast={fast}{ac}{sym}\nout: {out_dir}",
             expand=False,
         )
     )

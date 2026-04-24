@@ -76,6 +76,34 @@ concord once /path/to/repo -t "..." -o /tmp/out --format diff
 concord once /path/to/repo -t "..." -o /tmp/out --fast
 ```
 
+**InlineCoder-style anchor path** (optional): narrow to a file/symbol, build a
+draft anchor and upstream/downstream assembly (`--use-anchor`).
+
+```bash
+concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
+  --target-file tasklab/vowels.py \
+  --symbol count_vowels \
+  --use-anchor
+
+# Optional: probing summary on the anchor draft (uses mock logprobs if the API
+# does not return logprobs; requires --use-anchor)
+concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
+  --target-file tasklab/vowels.py \
+  --symbol count_vowels \
+  --use-anchor --with-probe
+```
+
+**Mini evaluation (paper artifact / regression):** runs the bundled TaskLab
+fixture tasks against three variants and prints one JSON object to stdout.
+
+```bash
+cd /path/to/ConcordCoder     # this repo: directory containing pyproject.toml
+python3 scripts/mini_eval.py
+# optional: use another checkout of the fixture repository
+export CONCORD_FIXTURE_ROOT=/path/to/tasklab
+python3 scripts/mini_eval.py
+```
+
 `--format` accepts: `markdown_plan` | `md` | `json` / `json_files` | `diff` / `unified_diff`.
 
 ### Phase 1: `extract` (context only)

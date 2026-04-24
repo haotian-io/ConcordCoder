@@ -22,9 +22,6 @@ ANCHOR_SYSTEM = """\
 
 def _signature_stub(fn: FunctionInfo) -> str:
     args = ", ".join(fn.args)
-    if fn.qualname and "." in fn.qualname:
-        cls, _, _m = fn.qualname.partition(".")
-        return f"def {fn.name}(self, {args}):\n    raise NotImplementedError  # anchor\n"
     return f"def {fn.name}({args}):\n    raise NotImplementedError  # anchor\n"
 
 

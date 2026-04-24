@@ -89,6 +89,22 @@ class AssembledContext(BaseModel):
     downstream_snippets: list[SnippetRef] = Field(default_factory=list)
 
 
+class AlignmentTurnLog(BaseModel):
+    """One dialogue turn for user-study / traceability (Liao XAI type × evidence target)."""
+
+    phase: str  # "A" | "B" | "C" (alignment dialogue phases)
+    role: str  # "assistant" | "user"
+    xai_question_type: str | None = Field(
+        default=None,
+        description="Liao-style XAI question type, e.g. Global how, Why, What if, Performance.",
+    )
+    evidence_category: str | None = Field(
+        default=None,
+        description="Evidence slice: ast, call_graph, git, tests, constraints, ...",
+    )
+    content_excerpt: str = ""
+
+
 class AlignmentRecord(BaseModel):
     """Output of alignment dialogue, input to constrained generation."""
 
@@ -99,6 +115,7 @@ class AlignmentRecord(BaseModel):
     rejected_constraints: list[Constraint] = Field(default_factory=list)  # 用户明确否决的
     implementation_preference: str = ""   # 用户选择的方案描述
     notes: str = ""
+    turn_log: list[AlignmentTurnLog] = Field(default_factory=list)
 
 
 class GenerationRequest(BaseModel):
@@ -141,6 +158,12 @@ class SingleTaskSpec(BaseModel):
     full_align: bool = False
     output_format: OutputFormat = OutputFormat.MARKDOWN_PLAN
     answers: dict[str, str] = Field(default_factory=dict)
+    # InlineCoder-style anchor path (optional)
+    target_file: str | None = None
+    target_symbol: str | None = None
+    use_anchor: bool = False
+    with_probe: bool = False
+    """If True and anchor ran, run ProbingEngine on anchor text with mock logprobs (AlignCoder-style signal)."""
 
 
 class SingleTaskResult(BaseModel):
@@ -151,3 +174,5 @@ class SingleTaskResult(BaseModel):
     parsed_files: list[FileContentItem] = Field(default_factory=list)
     unified_diff: str = ""
     out_dir: str | None = None
+    probe: dict[str, Any] = Field(default_factory=dict)
+    """Optional ProbingEngine summary (``needs_probing``, questions, etc.)."""

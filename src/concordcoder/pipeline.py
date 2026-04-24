@@ -80,7 +80,15 @@ def run_single_task(
     """Single bounded run: light alignment by default (``no_align`` / ``full_align`` in ``spec``)."""
     repo_root = Path(repo_root).resolve()
 
-    builder = BundleBuilder(repo_root, llm_client=llm_client, fast=fast_extract)
+    eff_max_files = min(40, 120) if fast_extract else 120
+
+    builder = BundleBuilder(
+        repo_root,
+        llm_client=llm_client,
+        fast=fast_extract,
+        target_file=spec.target_file,
+        target_symbol=spec.target_symbol,
+    )
     bundle = builder.build(spec.task)
 
     if spec.full_align and llm_client is not None:
@@ -93,12 +101,49 @@ def run_single_task(
     if spec.allowlist_paths:
         alignment = alignment.model_copy(update={"allowlist_paths": spec.allowlist_paths})
 
+    assembly = None
+    probe_data: dict = {}
+    anchor_text = ""
+
+    if spec.use_anchor and spec.target_file and spec.target_symbol:
+        from concordcoder.extraction.call_graph import build_call_graph
+        from concordcoder.generation.anchor_pipeline import (
+            assemble_inlinecoder_mvp,
+            draft_anchor,
+        )
+
+        cg_builder, analyses = build_call_graph(repo_root, max_files=eff_max_files)
+        anchor_text = draft_anchor(
+            spec.target_file, spec.target_symbol, analyses, llm_client
+        )
+        assembly = assemble_inlinecoder_mvp(
+            repo_root,
+            spec.target_file,
+            spec.target_symbol,
+            anchor_text,
+            analyses,
+            cg_builder,
+        )
+
+        if spec.with_probe:
+            from concordcoder.generation.probing import ProbingEngine, mock_logprobs_from_code
+
+            engine = ProbingEngine(llm_client=llm_client, bundle=bundle)
+            pr = engine.run(anchor_text, mock_logprobs_from_code(anchor_text))
+            probe_data = {
+                "needs_probing": pr.needs_probing,
+                "probe_questions": pr.probe_questions,
+                "low_confidence_summary": pr.low_confidence_summary,
+                "n_probes": len(pr.probes),
+            }
+
     req = GenerationRequest(
         repo_root=str(repo_root),
         user_request=spec.task,
         bundle=bundle,
         alignment=alignment,
         output_format=spec.output_format,
+        assembly=assembly,
     )
     result = ConstrainedGenerator(llm_client=llm_client).generate(req)
 
@@ -110,6 +155,7 @@ def run_single_task(
         generation=result,
         parsed_files=parsed,
         unified_diff=udiff,
+        probe=probe_data,
     )
 
 

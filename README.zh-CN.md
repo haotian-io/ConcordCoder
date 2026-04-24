@@ -72,6 +72,32 @@ concord once /path/to/repo -t "..." -o /tmp/out --format diff
 concord once /path/to/repo -t "..." -o /tmp/out --fast
 ```
 
+**InlineCoder 式锚点路径**（可选）：指定 `target_file` + 符号，生成草稿锚点并组装上下游上下文（`--use-anchor`）。
+
+```bash
+concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
+  --target-file tasklab/vowels.py \
+  --symbol count_vowels \
+  --use-anchor
+
+# 可选：在锚点草稿上跑探针摘要（无 logprobs 时可用 mock；需同时 --use-anchor）
+concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
+  --target-file tasklab/vowels.py \
+  --symbol count_vowels \
+  --use-anchor --with-probe
+```
+
+**轻量机评（论文 artifact / 回归）**：对内置 TaskLab 与 `fixtures/tasks` 下 YAML
+跑三个变体，向标准输出打印一行 JSON。
+
+```bash
+cd /path/to/ConcordCoder   # 含 pyproject.toml 的本仓库根目录
+python3 scripts/mini_eval.py
+# 可选：指向 tasklab 仓库的另一份路径
+export CONCORD_FIXTURE_ROOT=/path/to/tasklab
+python3 scripts/mini_eval.py
+```
+
 `--format`：`markdown_plan` | `md` | `json` / `json_files` | `diff` / `unified_diff`。
 
 ### Phase 1：`extract`

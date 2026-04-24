@@ -72,6 +72,32 @@ concord once /path/to/repo -t "..." -o /tmp/out --format diff
 concord once /path/to/repo -t "..." -o /tmp/out --fast
 ```
 
+**InlineCoder 風アンカー**（任意）：`--target-file` とシンボルで絞り込み、ドラフト
+アンカーと前後文脈の組立を有効化（`--use-anchor`）。
+
+```bash
+concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
+  --target-file tasklab/vowels.py \
+  --symbol count_vowels \
+  --use-anchor
+
+# 任意：アンカー草稿に Probing（API に logprobs が無い場合は mock。--use-anchor が必須）
+concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
+  --target-file tasklab/vowels.py \
+  --symbol count_vowels \
+  --use-anchor --with-probe
+```
+
+**ミニ評価（artifact / 回帰）**：同梱 TaskLab と `fixtures/tasks` の YAML から
+3 バリエーションを走らせ、1 行の JSON を標準出力へ。
+
+```bash
+cd /path/to/ConcordCoder   # pyproject.toml がある本リポジトリ根
+python3 scripts/mini_eval.py
+export CONCORD_FIXTURE_ROOT=/path/to/tasklab
+python3 scripts/mini_eval.py
+```
+
 `--format` 例：`markdown_plan` | `md` | `json` / `json_files` | `diff` / `unified_diff`。
 
 ### Phase 1: `extract`

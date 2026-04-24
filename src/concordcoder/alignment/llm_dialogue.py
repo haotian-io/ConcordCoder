@@ -12,7 +12,12 @@ from concordcoder.alignment.prompts import (
     build_constraint_inference_prompt,
     build_context_reconstruction_prompt,
 )
-from concordcoder.schemas import AlignmentRecord, Constraint, ContextBundle
+from concordcoder.schemas import (
+    AlignmentRecord,
+    AlignmentTurnLog,
+    Constraint,
+    ContextBundle,
+)
 
 
 class DialoguePhase(Enum):
@@ -32,6 +37,7 @@ class DialogueTurn:
 class DialogueState:
     phase: DialoguePhase = DialoguePhase.CONTEXT_RECONSTRUCTION
     history: list[DialogueTurn] = field(default_factory=list)
+    turn_log: list[AlignmentTurnLog] = field(default_factory=list)
     confirmed_constraints: list[Constraint] = field(default_factory=list)
     rejected_constraints: list[Constraint] = field(default_factory=list)
     allowlist_paths: list[str] = field(default_factory=list)
@@ -55,6 +61,33 @@ class LLMAlignmentDialogue:
 
     def __init__(self, llm_client=None) -> None:
         self.llm = llm_client
+
+    @staticmethod
+    def _excerpt(text: str, max_len: int = 320) -> str:
+        t = text.strip()
+        if len(t) <= max_len:
+            return t
+        return t[: max_len - 1] + "…"
+
+    def _append_turn_log(
+        self,
+        state: DialogueState,
+        phase: str,
+        role: str,
+        content: str,
+        xai_question_type: str | None = None,
+        evidence_category: str | None = None,
+    ) -> None:
+        """Tag each turn for user-study logging (Liao XAI type × evidence target)."""
+        state.turn_log.append(
+            AlignmentTurnLog(
+                phase=phase,
+                role=role,
+                xai_question_type=xai_question_type,
+                evidence_category=evidence_category,
+                content_excerpt=self._excerpt(content),
+            )
+        )
 
     # ------------------------------------------------------------------
     # Interactive mode: human in the loop
@@ -114,6 +147,15 @@ class LLMAlignmentDialogue:
         # Apply simple rule-based constraints from answers
         self._apply_answer_rules(answers, state, bundle)
 
+        self._append_turn_log(
+            state,
+            "B",
+            "assistant",
+            "Non-interactive batch: constraints from LLM inference (if any) + answer rules.",
+            xai_question_type="Why",
+            evidence_category="constraints_batch",
+        )
+
         return self._build_record(bundle, state)
 
     # ------------------------------------------------------------------
@@ -140,6 +182,14 @@ class LLMAlignmentDialogue:
 
         print_fn(f"\n🤖  {assistant_msg}\n")
         state.history.append(DialogueTurn("assistant", assistant_msg))
+        self._append_turn_log(
+            state,
+            "A",
+            "assistant",
+            assistant_msg,
+            xai_question_type="Global how",
+            evidence_category="ast_call_graph_git_tests",
+        )
 
         user_resp = self._prompt_user(
             input_fn,
@@ -148,6 +198,7 @@ class LLMAlignmentDialogue:
         )
         if user_resp:
             state.history.append(DialogueTurn("user", user_resp))
+            self._append_turn_log(state, "A", "user", user_resp, evidence_category="user_clarification")
             # Follow-up response
             if self.llm and user_resp.lower() not in ("done", "skip", ""):
                 follow_up = self.llm.chat(
@@ -159,6 +210,14 @@ class LLMAlignmentDialogue:
                 )
                 print_fn(f"\n🤖  {follow_up}\n")
                 state.history.append(DialogueTurn("assistant", follow_up))
+                self._append_turn_log(
+                    state,
+                    "A",
+                    "assistant",
+                    follow_up,
+                    xai_question_type="Why",
+                    evidence_category="ast_call_graph_git_tests",
+                )
 
     def _run_phase_b(
         self, bundle: ContextBundle, state: DialogueState,
@@ -183,11 +242,29 @@ class LLMAlignmentDialogue:
             for c in bundle.constraints_guess:
                 state.confirmed_constraints.append(c)
 
+        summary_b = f"确认 {len(state.confirmed_constraints)} 条约束; 风险见 Phase B 展示。"
+        self._append_turn_log(
+            state,
+            "B",
+            "assistant",
+            summary_b,
+            xai_question_type="Why",
+            evidence_category="constraints_risks",
+        )
+
         # Ask user to confirm/modify
         print_fn("\n💬  请确认以上约束（直接回车=全部接受，或输入修改意见）: ", )
         user_input = self._prompt_user(input_fn, "", state)
         if user_input:
             state.history.append(DialogueTurn("user", user_input))
+            self._append_turn_log(
+                state,
+                "B",
+                "user",
+                user_input,
+                xai_question_type="How to still be this",
+                evidence_category="constraints_ack",
+            )
             # Check for explicit rejections
             if "不需要" in user_input or "去掉" in user_input or "remove" in user_input.lower():
                 print_fn("📝  已记录你的修改意见，将在生成时考虑。")
@@ -197,6 +274,14 @@ class LLMAlignmentDialogue:
         crit_input = self._prompt_user(input_fn, "", state)
         if crit_input and crit_input.lower() not in ("", "skip", "done"):
             state.acceptance_criteria.append(crit_input)
+            self._append_turn_log(
+                state,
+                "B",
+                "user",
+                crit_input,
+                xai_question_type="Performance",
+                evidence_category="acceptance_tests",
+            )
         else:
             state.acceptance_criteria.append("现有测试全部通过（无回归）")
             state.acceptance_criteria.append("新功能有对应测试覆盖")
@@ -214,8 +299,17 @@ class LLMAlignmentDialogue:
         if not options:
             print_fn("\n  暂无具体方案选项，将使用默认策略：最小侵入性实现。")
             state.implementation_preference = "最小侵入性实现，优先复用现有模块。"
+            self._append_turn_log(
+                state,
+                "C",
+                "assistant",
+                state.implementation_preference,
+                xai_question_type="What if",
+                evidence_category="implementation_default",
+            )
         else:
             print_fn("\n以下是建议的实现方案：\n")
+            lines: list[str] = []
             for i, opt in enumerate(options[:3], 1):
                 name = opt.get("name", f"方案{i}")
                 desc = opt.get("description", "")
@@ -228,6 +322,17 @@ class LLMAlignmentDialogue:
                 if cons:
                     print_fn(f"      缺点: {cons}")
                 print_fn()
+                lines.append(f"[{i}] {name}: {desc}")
+
+            opt_blob = "\n".join(lines)
+            self._append_turn_log(
+                state,
+                "C",
+                "assistant",
+                opt_blob,
+                xai_question_type="What if",
+                evidence_category="implementation_options",
+            )
 
             choice = self._prompt_user(
                 input_fn,
@@ -240,6 +345,15 @@ class LLMAlignmentDialogue:
                     state.implementation_preference = options[idx].get("name", choice)
             elif choice:
                 state.implementation_preference = choice
+            if choice:
+                self._append_turn_log(
+                    state,
+                    "C",
+                    "user",
+                    choice,
+                    xai_question_type="How to be that",
+                    evidence_category="implementation_choice",
+                )
 
         print_fn(f"\n  ✅  方案确定：{state.implementation_preference or '默认策略'}")
 
@@ -248,6 +362,14 @@ class LLMAlignmentDialogue:
         al_input = self._prompt_user(input_fn, "", state)
         if al_input and al_input.lower() not in ("", "skip"):
             state.allowlist_paths = [p.strip() for p in al_input.split(",") if p.strip()]
+            self._append_turn_log(
+                state,
+                "C",
+                "user",
+                al_input,
+                xai_question_type="Output",
+                evidence_category="allowlist_paths",
+            )
 
     # ------------------------------------------------------------------
     # Helpers
@@ -316,6 +438,7 @@ class LLMAlignmentDialogue:
             test_acceptance_criteria=state.acceptance_criteria or ["现有测试全部通过（无回归）"],
             implementation_preference=state.implementation_preference,
             notes=f"对话轮次: {state.turns_taken}，阶段: {state.phase.name}",
+            turn_log=list(state.turn_log),
         )
 
     def _initial_questions(self, bundle: ContextBundle) -> list[str]:
