@@ -44,7 +44,7 @@ pip install -e ".[dev,all]"
 ## ドキュメント
 
 - **[../项目全面总结.md](../项目全面总结.md)** — 全体説明と付録 A–D（ロードマップ、外測、研究計画、タスクガイド）。`Code/docs/` には置きません。  
-- **利用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — `Code/` の親の利用索引、logprobs / SWE skeleton 等。  
+- **利用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — `Code/` の親：SWE-bench Lite、logprobs、demo 等。  
 - 初回は **`concord doctor`** で API キーとクライアント初期化を確認（チャットは送りません）。
 
 ## 環境変数
