@@ -46,7 +46,8 @@ pip install -e ".[dev,all]"
 
 ## Documentation
 
-- **[USAGE.md](USAGE.md)** — index to demo notes, user-study tips, and research checklist.
+- **[../项目全面总结.md](../项目全面总结.md)** — project overview plus appendices A–D (roadmap, pilot notes, research plan, task guide). Markdown is **not** kept under `Code/docs/`.
+- **Usage index:** [USAGE.md](../USAGE.md) (EN) · [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — logprobs / SWE skeleton pointers (parent of `Code/`).
 - First-time API check: `concord doctor` (verifies keys / client init; no chat call).
 
 ## Environment variables
@@ -65,7 +66,7 @@ export OPENAI_BASE_URL=https://example.com/v1
 
 ### `concord once` (single task, good for scripts / CI)
 
-By default, **no** multi-turn LLM alignment: lightweight constraints from extraction + rule-based alignment (low latency). Use `--full-align` for the full **batch** LLM alignment step.
+By default, **batch LLM cognitive alignment** runs (`LLMAlignmentDialogue.run_batch`, consistent with paper Phase~2). Use **`--no-full-align`** only for fast regression, cost savings, or CI checks (extraction-side constraints + rule-based alignment).
 
 ```bash
 pip install -e ".[dev,openai]"   # or anthropic
@@ -91,26 +92,26 @@ draft anchor and upstream/downstream assembly (`--use-anchor`).
 
 ```bash
 concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file tasklab/vowels.py \
-  --symbol count_vowels \
+  --target-file src/my_module.py \
+  --symbol my_function \
   --use-anchor
 
 # Optional: probing summary on the anchor draft (uses mock logprobs if the API
 # does not return logprobs; requires --use-anchor)
 concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file tasklab/vowels.py \
-  --symbol count_vowels \
+  --target-file src/my_module.py \
+  --symbol my_function \
   --use-anchor --with-probe
 ```
 
-**Mini evaluation (paper artifact / regression):** runs the bundled TaskLab
-fixture tasks against three variants and prints one JSON object to stdout.
+**Mini evaluation (`mini_eval.py`):** runs three variants on a **real repo you
+supply** plus **task YAMLs you supply**; prints one JSON object to stdout. No
+no sample project is bundled; see [`examples/mini_eval/README.md`](examples/mini_eval/README.md) ([zh](examples/mini_eval/README.zh-CN.md) · [ja](examples/mini_eval/README.ja.md)).
 
 ```bash
-cd /path/to/ConcordCoder     # this repo: directory containing pyproject.toml
-python3 scripts/mini_eval.py
-# optional: use another checkout of the fixture repository
-export CONCORD_FIXTURE_ROOT=/path/to/tasklab
+cd /path/to/ConcordCoder/Code
+export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
+export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
 python3 scripts/mini_eval.py
 ```
 
@@ -180,7 +181,7 @@ Covers, among other things: AST/call graph/test extraction, `BundleBuilder`, ali
 
 ## Research
 
-See [`docs/research_plan.md`](docs/research_plan.md).
+See [`../项目全面总结.md`](../项目全面总结.md) — **Appendix C** (research plan, RQ1–RQ3).
 
 - **RQ1:** Does ConcordCoder improve code generation quality (e.g. SWE-bench–style evals)?
 - **RQ2:** Subjective and objective impact on user understanding?

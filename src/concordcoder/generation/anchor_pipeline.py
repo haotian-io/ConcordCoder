@@ -3,15 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from concordcoder.extraction.ast_analyzer import FileAnalysis
 from concordcoder.extraction.call_graph import CallGraphBuilder
 from concordcoder.extraction.symbol_resolve import find_function_for_symbol
 from concordcoder.schemas import AssembledContext, EvidenceLevel, SnippetRef
-
-if TYPE_CHECKING:
-    pass
 
 
 ANCHOR_SYSTEM = """\
@@ -20,21 +16,18 @@ ANCHOR_SYSTEM = """\
 """
 
 
-def draft_anchor(
+def _anchor_user_prompt(
     target_file: str,
     target_symbol: str,
     analyses: dict[str, FileAnalysis],
-    llm_client=None,
-) -> str:
-    """Blind anchor implementation from signature (InlineCoder step 1)."""
+) -> tuple[str | None, str]:
+    """Return (error_line, user_prompt). ``error_line`` is set when the symbol cannot be resolved."""
     fn = find_function_for_symbol(analyses, target_file, target_symbol)
     if not fn:
-        return f"# anchor: could not resolve {target_symbol!r} in {target_file}"
-    if not llm_client:
-        raise ValueError(
-            "draft_anchor requires an LLM client when use_anchor is enabled; set API keys or pass LLMClient."
+        return (
+            f"# anchor: could not resolve {target_symbol!r} in {target_file}",
+            "",
         )
-
     args = ", ".join(fn.args)
     qual = fn.qualname
     prompt = (
@@ -44,11 +37,49 @@ def draft_anchor(
         f"起止行: {fn.start_line}-{fn.end_line}\n"
         "请只输出可替换进文件的一段草稿实现（方法体或函数体），使用 pass/TODO/raise 均可。"
     )
+    return (None, prompt)
+
+
+def draft_anchor(
+    target_file: str,
+    target_symbol: str,
+    analyses: dict[str, FileAnalysis],
+    llm_client=None,
+) -> str:
+    """Blind anchor implementation from signature (InlineCoder step 1)."""
+    err, prompt = _anchor_user_prompt(target_file, target_symbol, analyses)
+    if err:
+        return err
+    if not llm_client:
+        raise ValueError(
+            "draft_anchor requires an LLM client when use_anchor is enabled; set API keys or pass LLMClient."
+        )
     out = llm_client.chat(
         [{"role": "user", "content": prompt}],
         system=ANCHOR_SYSTEM,
     )
     return out.strip()
+
+
+def draft_anchor_with_logprobs(
+    target_file: str,
+    target_symbol: str,
+    analyses: dict[str, FileAnalysis],
+    llm_client,
+) -> tuple[str, list]:
+    """Same as ``draft_anchor`` but uses OpenAI ``logprobs`` on the completion (one request)."""
+    err, prompt = _anchor_user_prompt(target_file, target_symbol, analyses)
+    if err:
+        return err, []
+    if not llm_client:
+        raise ValueError(
+            "draft_anchor_with_logprobs requires an LLM client; set API keys or pass LLMClient."
+        )
+    text, tokens = llm_client.chat_with_logprobs(
+        [{"role": "user", "content": prompt}],
+        system=ANCHOR_SYSTEM,
+    )
+    return text, tokens
 
 
 def assemble_inlinecoder_mvp(

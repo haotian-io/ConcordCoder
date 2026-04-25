@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from concordcoder.alignment.dialogue import AlignmentDialogue
@@ -67,7 +68,7 @@ def run_single_task(
     *,
     fast_extract: bool = False,
 ) -> SingleTaskResult:
-    """Single bounded run: light alignment by default (``no_align`` / ``full_align`` in ``spec``)."""
+    """Single bounded run: alignment mode controlled by ``spec.full_align`` (default: LLM batch alignment)."""
     if llm_client is None:
         raise ValueError(
             "llm_client is required for run_single_task. Set OPENAI_API_KEY (and optional "
@@ -99,18 +100,38 @@ def run_single_task(
     assembly = None
     probe_data: dict = {}
     anchor_text = ""
+    anchor_logprobs: list | None = None
+    anchor_logprob_error: str | None = None
 
     if spec.use_anchor and spec.target_file and spec.target_symbol:
         from concordcoder.extraction.call_graph import build_call_graph
         from concordcoder.generation.anchor_pipeline import (
             assemble_inlinecoder_mvp,
             draft_anchor,
+            draft_anchor_with_logprobs,
         )
 
         cg_builder, analyses = build_call_graph(repo_root, max_files=eff_max_files)
-        anchor_text = draft_anchor(
-            spec.target_file, spec.target_symbol, analyses, llm_client
+        use_real_lp = (
+            spec.with_probe
+            and os.environ.get("CONCORD_REAL_LOGPROBS", "").lower() in ("1", "true", "yes")
+            and getattr(llm_client, "backend", "") == "openai"
         )
+        if use_real_lp:
+            try:
+                anchor_text, anchor_logprobs = draft_anchor_with_logprobs(
+                    spec.target_file, spec.target_symbol, analyses, llm_client
+                )
+            except (RuntimeError, ValueError) as e:
+                anchor_text = draft_anchor(
+                    spec.target_file, spec.target_symbol, analyses, llm_client
+                )
+                anchor_logprobs = None
+                anchor_logprob_error = str(e)
+        else:
+            anchor_text = draft_anchor(
+                spec.target_file, spec.target_symbol, analyses, llm_client
+            )
         assembly = assemble_inlinecoder_mvp(
             repo_root,
             spec.target_file,
@@ -124,13 +145,30 @@ def run_single_task(
             from concordcoder.generation.probing import ProbingEngine, mock_logprobs_from_code
 
             engine = ProbingEngine(llm_client=llm_client, bundle=bundle)
-            pr = engine.run(anchor_text, mock_logprobs_from_code(anchor_text))
+            tokens = (
+                anchor_logprobs
+                if anchor_logprobs
+                else mock_logprobs_from_code(anchor_text)
+            )
+            if anchor_logprobs:
+                logprob_source = "openai_chat_logprobs"
+            elif anchor_logprob_error:
+                logprob_source = "mock_fallback_after_anchor_error"
+            else:
+                logprob_source = "mock_default"
+            if anchor_logprobs is not None and len(anchor_logprobs) == 0:
+                tokens = mock_logprobs_from_code(anchor_text)
+                logprob_source = "mock_fallback_empty_logprobs"
+            pr = engine.run(anchor_text, tokens)
             probe_data = {
                 "needs_probing": pr.needs_probing,
                 "probe_questions": pr.probe_questions,
                 "low_confidence_summary": pr.low_confidence_summary,
                 "n_probes": len(pr.probes),
+                "logprob_source": logprob_source,
             }
+            if anchor_logprob_error:
+                probe_data["logprob_error"] = anchor_logprob_error
 
     req = GenerationRequest(
         repo_root=str(repo_root),

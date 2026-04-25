@@ -1,30 +1,40 @@
 #!/usr/bin/env python3
 """
-Mini evaluation: fixture tasklab × baseline variants, JSON to stdout.
-Requires the same API keys as ``concord once`` (OPENAI_API_KEY and optional OPENAI_BASE_URL).
+Mini evaluation: user-supplied **real** repo × task YAMLs × baseline variants → JSON on stdout.
 
-The printed JSON matches the paper (§Evaluation, RQ1, artifact-backed driver):
-  Top level: "fixture_repo", "rows"
+Requires the same API keys as ``concord once`` (OPENAI_API_KEY and optional OPENAI_BASE_URL).
+Each row uses ``full_align=True`` (LLM batch alignment), matching ``concord once`` defaults.
+
+**No bundled sample repository.** Set:
+
+- ``CONCORD_EVAL_REPO_ROOT`` — absolute path to the repository root to evaluate.
+- **One of:** ``CONCORD_EVAL_TASKS_DIR`` (directory of ``*.yaml``) or ``CONCORD_EVAL_TASKS_GLOB``
+  (shell glob, e.g. ``/path/to/tasks/*.yaml``).
+
+If either is missing, prints a JSON error object and exits with code 1.
+
+Output shape (artifact / regression):
+  Top level: ``eval_repo``, ``rows`` (``fixture_repo`` is also set to the same string for older parsers)
   Each row: task_id, task_yaml, variant (narrow_no_anchor | with_anchor |
             anchor_with_probe), dependency_level, use_anchor, with_probe,
             pytest{ran, exit_code, pass}, warnings_n, code_plan_len, probe, n_parsed_files
 
-Usage (from package root, after pip install -e .):
-  python3 scripts/mini_eval.py
+Example::
 
-Optional:
-  CONCORD_FIXTURE_ROOT=/path/to/tasklab
+  export CONCORD_EVAL_REPO_ROOT=/path/to/your/clone
+  export CONCORD_EVAL_TASKS_DIR=/path/to/dir/with/yamls
+  python3 scripts/mini_eval.py
 """
 
 from __future__ import annotations
 
+import glob as glob_module
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
 
-# Add src to path when run as script
 _CODE_ROOT = Path(__file__).resolve().parent.parent
 if str(_CODE_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_CODE_ROOT / "src"))
@@ -52,23 +62,79 @@ def _pytest_summary(repo: Path) -> dict:
     }
 
 
-def main() -> None:
-    default_repo = _CODE_ROOT / "fixtures" / "repos" / "tasklab"
-    repo = Path(os.environ.get("CONCORD_FIXTURE_ROOT", default_repo)).resolve()
-    task_dir = _CODE_ROOT / "fixtures" / "tasks"
+def _collect_yaml_paths() -> tuple[list[Path] | None, str | None]:
+    """Return (yaml_paths, error_message)."""
+    g = os.environ.get("CONCORD_EVAL_TASKS_GLOB", "").strip()
+    d = os.environ.get("CONCORD_EVAL_TASKS_DIR", "").strip()
+    if not g and not d:
+        return None, "Set CONCORD_EVAL_TASKS_GLOB or CONCORD_EVAL_TASKS_DIR"
+    if g and d:
+        return None, "Set only one of CONCORD_EVAL_TASKS_GLOB or CONCORD_EVAL_TASKS_DIR"
+    if g:
+        paths = [Path(p).resolve() for p in sorted(glob_module.glob(g))]
+        paths = [p for p in paths if p.is_file() and p.suffix.lower() in (".yaml", ".yml")]
+        return (paths if paths else None), None if paths else f"No YAML files matched: {g!r}"
+    if d:
+        base = Path(d).resolve()
+        if not base.is_dir():
+            return None, f"CONCORD_EVAL_TASKS_DIR is not a directory: {base}"
+        paths = sorted(base.glob("*.yaml")) + sorted(base.glob("*.yml"))
+        seen: set[Path] = set()
+        uniq: list[Path] = []
+        for p in paths:
+            if p not in seen:
+                seen.add(p)
+                uniq.append(p)
+        if not uniq:
+            return None, f"No *.yaml or *.yml in {base}"
+        return uniq, None
 
-    rows: list[dict] = []
-    yamls = sorted(task_dir.glob("*.yaml"))
-    if not yamls:
-        print(json.dumps({"error": "no task yaml", "task_dir": str(task_dir)}))
+
+def main() -> None:
+    repo_raw = os.environ.get("CONCORD_EVAL_REPO_ROOT", "").strip()
+    if not repo_raw:
+        print(
+            json.dumps(
+                {
+                    "error": "CONCORD_EVAL_REPO_ROOT is required (path to a real repository).",
+                    "required_env": [
+                        "CONCORD_EVAL_REPO_ROOT",
+                        "CONCORD_EVAL_TASKS_DIR or CONCORD_EVAL_TASKS_GLOB",
+                    ],
+                },
+                ensure_ascii=False,
+            )
+        )
         sys.exit(1)
 
+    repo = Path(repo_raw).resolve()
+    if not repo.is_dir():
+        print(json.dumps({"error": f"CONCORD_EVAL_REPO_ROOT is not a directory: {repo}"}))
+        sys.exit(1)
+
+    yamls, yerr = _collect_yaml_paths()
+    if yerr or not yamls:
+        print(
+            json.dumps(
+                {
+                    "error": yerr or "No task YAML files found.",
+                    "required_env": [
+                        "CONCORD_EVAL_REPO_ROOT",
+                        "CONCORD_EVAL_TASKS_DIR or CONCORD_EVAL_TASKS_GLOB",
+                    ],
+                },
+                ensure_ascii=False,
+            )
+        )
+        sys.exit(1)
+
+    rows: list[dict] = []
     pyt = _pytest_summary(repo)
 
     try:
         llm = get_llm_client()
     except EnvironmentError as e:
-        print(json.dumps({"error": str(e)}), file=sys.stderr)
+        print(json.dumps({"error": str(e)}, ensure_ascii=False), file=sys.stderr)
         sys.exit(1)
 
     variants = [
@@ -87,7 +153,7 @@ def main() -> None:
                 target_symbol=ft.target_symbol,
                 use_anchor=use_a,
                 with_probe=with_p,
-                full_align=False,
+                full_align=True,
                 output_format=OutputFormat.MARKDOWN_PLAN,
                 answers=ft.alignment_answers,
             )
@@ -108,8 +174,10 @@ def main() -> None:
                 }
             )
 
+    repo_s = str(repo)
     out = {
-        "fixture_repo": str(repo),
+        "eval_repo": repo_s,
+        "fixture_repo": repo_s,
         "rows": rows,
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))

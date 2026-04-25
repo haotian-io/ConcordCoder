@@ -1,8 +1,0 @@
-# CoderEval-style: file-runnable
-id: pipeline_value
-task: "Implement pipeline_value to return helpers.double(n) + 1. Use the existing helpers module."
-target_file: tasklab/chain.py
-target_symbol: pipeline_value
-dependency_level: file-runnable
-alignment_answers:
-  api_stable: "yes"

@@ -1,0 +1,15 @@
+# 最小 SWE-bench 子集配置（与 scripts/swe_bench_batch.py 联用）
+#
+# 使用方式见 scripts/swe_bench_batch.py 顶部文档字符串。
+# instance_id 来自 princeton-nlp/SWE-bench_Lite 的 `instance_id` 列；请按论文需要增删。
+
+dataset: princeton-nlp/SWE-bench_Lite
+split: test
+instance_ids:
+  # 占位：替换为实际要跑的 5～20 条；也可留空仅用命令行 --instance-id
+  # - "django__django-12345"
+  # - "sphinx-doc__sphinx-6789"
+  []
+
+# 仅文档说明：本仓库不内置克隆；对每条 instance 需自行在 base_commit 检出
+# 仓库到 CONCORD_SWE_REPO_ROOT 指向的目录，再跑 batch 脚本。

@@ -10,6 +10,8 @@
 
 若你的工作区是嵌套结构（例如上层另有 `Paper/`、笔记等），那些资产不参与 `concord` 运行，仅作研究或文档用途。
 
+**用户研究（VS Code）**：不向应用商店发布时，可使用与 `Code/` 同级的薄壳扩展目录 **`../vscode-concordcoder/`**（`npm run compile` 后 `npx vsce package` 生成 `.vsix`）；说明见其中 `README.md`。
+
 ## 核心思路
 
 ```
@@ -43,7 +45,8 @@ pip install -e ".[dev,all]"
 
 ## 文档索引
 
-- **[USAGE.md](USAGE.md)**：试用说明、外测与问卷、研究路线索引。  
+- **[项目全面总结.md](../项目全面总结.md)**：项目总览与 **附录 A–D**（研究路线、外测说明、研究方案 RQ、个人任务指南）；**不在** `Code/docs/` 维护 Markdown。  
+- **使用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — 与 `Code/` 同级的使用索引、logprobs / SWE skeleton 等。  
 - 首次检查 API 配置：运行 **`concord doctor`**（只初始化客户端，不发起聊天请求）。
 
 ## 环境变量
@@ -62,7 +65,7 @@ export OPENAI_BASE_URL=https://example.com/v1
 
 ### 单任务 `concord once`（脚本 / CI 友好）
 
-默认**不**跑多轮 LLM 对齐，仅用抽取的约束猜测 + 规则对齐；需要完整**批量** LLM 对齐时加 `--full-align`。
+默认会跑 **LLM 批量认知对齐**（`LLMAlignmentDialogue.run_batch`，与论文 Phase 2 一致）。仅在做回归、脚本降本或 CI 快检时加 **`--no-full-align`**，改为抽取侧约束猜测 + 规则对齐快路径。
 
 ```bash
 pip install -e ".[dev,openai]"
@@ -86,25 +89,26 @@ concord once /path/to/repo -t "..." -o /tmp/out --fast
 
 ```bash
 concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file tasklab/vowels.py \
-  --symbol count_vowels \
+  --target-file src/my_module.py \
+  --symbol my_function \
   --use-anchor
 
 # 可选：在锚点草稿上跑探针摘要（无 logprobs 时可用 mock；需同时 --use-anchor）
 concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file tasklab/vowels.py \
-  --symbol count_vowels \
+  --target-file src/my_module.py \
+  --symbol my_function \
   --use-anchor --with-probe
+
+# OpenAI 下使用真实 chat logprobs（失败则回退 mock；见 ../USAGE.zh-CN.md）
+# export CONCORD_REAL_LOGPROBS=1
 ```
 
-**轻量机评（论文 artifact / 回归）**：对内置 TaskLab 与 `fixtures/tasks` 下 YAML
-跑三个变体，向标准输出打印一行 JSON。
+**机评脚本 `mini_eval.py`（artifact / 回归）**：对你**自备的真实仓库**与**自备任务 YAML 目录**跑三个变体，向 stdout 打印 JSON。仓库内不再附带示例项目；说明见 [`examples/mini_eval/README.zh-CN.md`](examples/mini_eval/README.zh-CN.md)（[en](examples/mini_eval/README.md) / [ja](examples/mini_eval/README.ja.md)）。
 
 ```bash
-cd /path/to/ConcordCoder   # 含 pyproject.toml 的本仓库根目录
-python3 scripts/mini_eval.py
-# 可选：指向 tasklab 仓库的另一份路径
-export CONCORD_FIXTURE_ROOT=/path/to/tasklab
+cd /path/to/ConcordCoder/Code   # 含 pyproject.toml
+export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
+export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
 python3 scripts/mini_eval.py
 ```
 
@@ -143,7 +147,7 @@ pytest -v
 
 ## 研究方案
 
-详见 [`docs/research_plan.md`](docs/research_plan.md)（**RQ1–RQ3** 与论文叙事一致）。
+详见仓库上级 [`项目全面总结.md`](../项目全面总结.md) 中的 **附录 C：研究方案详稿**（**RQ1–RQ3** 与论文叙事一致）。
 
 ---
 

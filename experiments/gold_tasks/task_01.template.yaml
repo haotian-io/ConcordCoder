@@ -1,0 +1,7 @@
+# 黄金任务 01 — 复制后改 id / 路径 / 描述；目标：偏 slib/单文件
+id: gold_01
+task: "（填写）用一句话描述要完成的维护型任务。"
+target_file: src/placeholder_module.py
+target_symbol: placeholder_function
+dependency_level: slib-runnable
+alignment_answers: {}

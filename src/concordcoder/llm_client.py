@@ -66,6 +66,44 @@ class LLMClient:
         else:
             return self._anthropic_chat(messages, system)
 
+    def chat_with_logprobs(
+        self, messages: list[dict[str, str]], system: str = ""
+    ) -> tuple[str, list]:
+        """OpenAI chat completion with ``logprobs=True``; returns (assistant_text, tokens).
+
+        ``tokens`` is a list of :class:`~concordcoder.generation.probing.TokenWithLogprob`.
+        Only the **openai** backend is supported; Anthropic messages API does not expose
+        token logprobs in the same way — callers should fall back to mocks.
+
+        Requires ``pip install openai`` and ``OPENAI_API_KEY``.
+        """
+        if self.backend != "openai":
+            raise ValueError(
+                "chat_with_logprobs is only supported for backend='openai'. "
+                "Use mock token logprobs for other backends."
+            )
+        from concordcoder.generation.probing import parse_openai_logprobs
+
+        all_messages: list[dict[str, str]] = []
+        if system:
+            all_messages.append({"role": "system", "content": system})
+        all_messages.extend(messages)
+        try:
+            response = self._client.chat.completions.create(
+                model=self.model,
+                messages=all_messages,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                logprobs=True,
+                top_logprobs=5,
+            )
+        except Exception as e:
+            raise RuntimeError(f"OpenAI API request (with logprobs) failed: {e}") from e
+        choice = response.choices[0]
+        text = (choice.message.content or "").strip()
+        tokens = parse_openai_logprobs(response)
+        return text, tokens
+
     def chat_json(self, messages: list[dict[str, str]], system: str = "") -> Any:
         """Like ``chat`` but parse the response as JSON."""
         raw = self.chat(messages, system)

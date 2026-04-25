@@ -43,7 +43,8 @@ pip install -e ".[dev,all]"
 
 ## ドキュメント
 
-- **[USAGE.md](USAGE.md)** — デモ手順・ユーザ研究の注意・研究ロードマップへの案内。  
+- **[../项目全面总结.md](../项目全面总结.md)** — 全体説明と付録 A–D（ロードマップ、外測、研究計画、タスクガイド）。`Code/docs/` には置きません。  
+- **利用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — `Code/` の親の利用索引、logprobs / SWE skeleton 等。  
 - 初回は **`concord doctor`** で API キーとクライアント初期化を確認（チャットは送りません）。
 
 ## 環境変数
@@ -62,7 +63,7 @@ export OPENAI_BASE_URL=https://example.com/v1
 
 ### `concord once`（単一タスク・スクリプト / CI 向け）
 
-デフォルトでは**多段 LLM アライメントは行わず**、抽出段の制約推定＋ルールベースの整列のみ（低遅延）。一括 LLM アライメントが必要なら `--full-align` を付けます。
+デフォルトで **LLM 一括認知アライメント**（`LLMAlignmentDialogue.run_batch`、論文 Phase 2 と整合）を実行します。回帰・コスト削減・CI 速検のみ **`--no-full-align`**（抽出＋ルール整列の簡易パス）を付けます。
 
 ```bash
 pip install -e ".[dev,openai]"
@@ -87,24 +88,23 @@ concord once /path/to/repo -t "..." -o /tmp/out --fast
 
 ```bash
 concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file tasklab/vowels.py \
-  --symbol count_vowels \
+  --target-file src/my_module.py \
+  --symbol my_function \
   --use-anchor
 
 # 任意：アンカー草稿に Probing（API に logprobs が無い場合は mock。--use-anchor が必須）
 concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file tasklab/vowels.py \
-  --symbol count_vowels \
+  --target-file src/my_module.py \
+  --symbol my_function \
   --use-anchor --with-probe
 ```
 
-**ミニ評価（artifact / 回帰）**：同梱 TaskLab と `fixtures/tasks` の YAML から
-3 バリエーションを走らせ、1 行の JSON を標準出力へ。
+**ミニ評価 `mini_eval.py`（artifact / 回帰）**：ユーザーが用意した**実リポジトリ**と**タスク YAML 群**に対し 3 バリエーションを実行し、JSON を標準出力へ。サンプルリポジトリは同梱しません。手順は [`examples/mini_eval/README.ja.md`](examples/mini_eval/README.ja.md)（[en](examples/mini_eval/README.md) / [zh](examples/mini_eval/README.zh-CN.md)）。
 
 ```bash
-cd /path/to/ConcordCoder   # pyproject.toml がある本リポジトリ根
-python3 scripts/mini_eval.py
-export CONCORD_FIXTURE_ROOT=/path/to/tasklab
+cd /path/to/ConcordCoder/Code
+export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
+export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
 python3 scripts/mini_eval.py
 ```
 
@@ -143,7 +143,7 @@ pytest -v
 
 ## 研究
 
-詳細は [`docs/research_plan.md`](docs/research_plan.md)（研究課題 RQ1–RQ3 に対応）。
+詳細は親ディレクトリの [`項目全面总结.md`](../项目全面总结.md) の **付録 C（研究方案）**（RQ1–RQ3）。
 
 ---
 

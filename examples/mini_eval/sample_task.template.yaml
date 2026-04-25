@@ -1,0 +1,7 @@
+# 复制到 CONCORD_EVAL_TASKS_DIR 后按你的仓库修改路径与符号名。
+id: my_task_id
+task: "用自然语言描述本次要完成的改动。"
+target_file: src/my_module.py
+target_symbol: my_function
+dependency_level: slib-runnable
+alignment_answers: {}

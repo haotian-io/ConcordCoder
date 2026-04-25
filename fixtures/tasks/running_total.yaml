@@ -1,8 +1,0 @@
-# CoderEval-style: class-runnable
-id: running_total
-task: "Implement RunningTotal.add to accumulate the running sum and return the new total after each call."
-target_file: tasklab/calc.py
-target_symbol: RunningTotal.add
-dependency_level: class-runnable
-alignment_answers:
-  api_stable: "yes"

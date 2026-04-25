@@ -1,8 +1,0 @@
-# CoderEval-style: slib-runnable (stdlib re)
-id: count_vowels
-task: "Implement count_vowels to count aeiou letters case-insensitively using the standard library."
-target_file: tasklab/vowels.py
-target_symbol: count_vowels
-dependency_level: slib-runnable
-alignment_answers:
-  api_stable: "yes"

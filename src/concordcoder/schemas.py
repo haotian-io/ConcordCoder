@@ -154,8 +154,8 @@ class SingleTaskSpec(BaseModel):
     task_id: str | None = None
     task: str
     allowlist_paths: list[str] = Field(default_factory=list)
-    no_align: bool = True
-    full_align: bool = False
+    no_align: bool = False
+    full_align: bool = True
     output_format: OutputFormat = OutputFormat.MARKDOWN_PLAN
     answers: dict[str, str] = Field(default_factory=dict)
     # InlineCoder-style anchor path (optional)

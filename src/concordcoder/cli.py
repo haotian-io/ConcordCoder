@@ -207,9 +207,9 @@ def once(
         help="markdown_plan | json | json_files | unified_diff | diff",
     ),
     full_align: bool = typer.Option(
-        False,
-        "--full-align",
-        help="启用 LLM 批量认知对齐（默认关闭以走快路径）",
+        True,
+        "--full-align/--no-full-align",
+        help="LLM 批量认知对齐（默认开启，与论文 Phase 2 一致）；--no-full-align 仅用规则快路径",
     ),
     fast: bool = typer.Option(
         False,
@@ -222,7 +222,7 @@ def once(
     target_file: str | None = typer.Option(
         None,
         "--target-file",
-        help="收窄上下文并配合锚点：仓库内相对路径，如 tasklab/vowels.py",
+        help="收窄上下文并配合锚点：仓库内相对路径，如 src/payment.py",
     ),
     target_symbol: str | None = typer.Option(
         None,
@@ -237,10 +237,10 @@ def once(
     with_probe: bool = typer.Option(
         False,
         "--with-probe",
-        help="在锚点草稿上跑 ProbingEngine（mock logprobs；需 --use-anchor）",
+        help="在锚点草稿上跑 ProbingEngine（默认 mock logprobs；设 CONCORD_REAL_LOGPROBS=1 且 OpenAI 时用真实 logprobs；需 --use-anchor）",
     ),
 ):
-    """单任务一次跑通：轻量对齐（默认）→ 约束生成 → 可解析产出写入 --out-dir。"""
+    """单任务一次跑通：认知对齐（默认 LLM 批量对齐）→ 约束生成 → 可解析产出写入 --out-dir。"""
     fmt = _parse_output_format(output_format)
     alist = [p.strip() for p in allowlist.split(",") if p.strip()]
 
