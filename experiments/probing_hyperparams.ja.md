@@ -29,7 +29,7 @@
 
 ## 4. 評価タスク（実行ごとに 1 行）
 
-行は**実際に実行した**タスク識別子と対応させる。例：手元 YAML の `id`（[`examples/mini_eval/`](examples/mini_eval/README.ja.md)）、または SWE-bench の `instance_id`（[`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py)、[`swe_tiny_config.yaml`](swe_tiny_config.yaml)）。投稿ごとに**表は 1 枚**に揃え、版が混在しないよう注意。
+行は**実際に実行した**タスク識別子と対応させる。例：手元 YAML の `id`（[`examples/mini_eval/`](examples/mini_eval/README.ja.md)）、または SWE-bench Lite の `instance_id`（既定 HF `SWE-bench/SWE-bench_Lite` の `test`；[`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py)、[`swe_tiny_config.yaml`](swe_tiny_config.yaml)）。投稿ごとに**表は 1 枚**に揃え、版が混在しないよう注意。
 
 | タスク id | confidence_threshold | churn_alpha | max_probes | CONCORD_REAL_LOGPROBS | 備考 |
 |-----------|----------------------|------------|------------|------------------------|------|

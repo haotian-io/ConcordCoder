@@ -1,15 +1,21 @@
-# 最小 SWE-bench 子集配置（与 scripts/swe_bench_batch.py 联用）
+# SWE-bench Lite 最小子集（与 scripts/swe_bench_batch.py 联用）
 #
-# 使用方式见 scripts/swe_bench_batch.py 顶部文档字符串。
-# instance_id 来自 princeton-nlp/SWE-bench_Lite 的 `instance_id` 列；请按论文需要增删。
+# 官方说明: https://www.swebench.com/lite.html
+# 数据集:   https://huggingface.co/datasets/SWE-bench/SWE-bench_Lite
+#
+# 用法: 对每条 instance 在 base_commit 上检出仓库后设 CONCORD_SWE_REPO_ROOT，再单条运行:
+#   python3 scripts/swe_bench_batch.py --instance-id "<id>" --out-row run.json
+# 或先打印 clone/checkout:
+#   python3 scripts/swe_bench_batch.py --instance-id "<id>" --print-meta
+#
+# 可用环境变量 CONCORD_SWE_DATASET / CONCORD_SWE_SPLIT 覆盖下列默认值。
 
-dataset: princeton-nlp/SWE-bench_Lite
+dataset: SWE-bench/SWE-bench_Lite
 split: test
 instance_ids:
-  # 占位：替换为实际要跑的 5～20 条；也可留空仅用命令行 --instance-id
-  # - "django__django-12345"
-  # - "sphinx-doc__sphinx-6789"
-  []
-
-# 仅文档说明：本仓库不内置克隆；对每条 instance 需自行在 base_commit 检出
-# 仓库到 CONCORD_SWE_REPO_ROOT 指向的目录，再跑 batch 脚本。
+  # 五条 demo：来自 Lite test 中不同上游仓库，便于小规模复现（论文 RQ1 子集）
+  - astropy__astropy-12907
+  - django__django-10914
+  - matplotlib__matplotlib-18869
+  - mwaskom__seaborn-2848
+  - pallets__flask-4045

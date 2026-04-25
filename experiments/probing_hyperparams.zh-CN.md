@@ -29,7 +29,7 @@
 
 ## 4. 评测任务（每跑一行一条）
 
-行应与**实际跑过**的任务标识一一对应：例如自备任务 YAML 里的 `id`（见 [`examples/mini_eval/`](examples/mini_eval/README.zh-CN.md)），或 SWE-bench 的 `instance_id`（[`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py)、[`swe_tiny_config.yaml`](swe_tiny_config.yaml)）。同一次投稿仅保留**一张**本表，避免多版本混淆。
+行应与**实际跑过**的任务标识一一对应：例如自备任务 YAML 里的 `id`（见 [`examples/mini_eval/`](examples/mini_eval/README.zh-CN.md)），或 SWE-bench Lite 的 `instance_id`（默认 HF 数据集 `SWE-bench/SWE-bench_Lite` 的 `test` 切分；[`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py)、[`swe_tiny_config.yaml`](swe_tiny_config.yaml)）。同一次投稿仅保留**一张**本表，避免多版本混淆。
 
 | 任务 id | confidence_threshold | churn_alpha | max_probes | CONCORD_REAL_LOGPROBS | 备注 |
 |---------|----------------------|------------|------------|------------------------|------|

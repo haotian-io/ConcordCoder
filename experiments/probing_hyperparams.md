@@ -29,7 +29,7 @@ If you override constructor args in an experiment, record the **new values** and
 
 ## 4. Evaluation tasks (one row per run)
 
-Rows should match identifiers you actually ran: e.g. YAML `id` from your [`examples/mini_eval/`](examples/mini_eval/README.md) task directory, or SWE-bench `instance_id` from [`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py) / [`swe_tiny_config.yaml`](swe_tiny_config.yaml). Keep **one** table per submission to avoid version drift.
+Rows should match identifiers you actually ran: e.g. YAML `id` from your [`examples/mini_eval/`](examples/mini_eval/README.md) task directory, or SWE-bench Lite `instance_id` (default HF dataset `SWE-bench/SWE-bench_Lite`, `test` split) from [`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py) / [`swe_tiny_config.yaml`](swe_tiny_config.yaml). Keep **one** table per submission to avoid version drift.
 
 | Task id | confidence_threshold | churn_alpha | max_probes | CONCORD_REAL_LOGPROBS | Notes |
 |---------|----------------------|-------------|------------|-------------------------|--------|

@@ -47,7 +47,7 @@ pip install -e ".[dev,all]"
 ## Documentation
 
 - **[../项目全面总结.md](../项目全面总结.md)** — project overview plus appendices A–D (roadmap, pilot notes, research plan, task guide). Markdown is **not** kept under `Code/docs/`.
-- **Usage index:** [USAGE.md](../USAGE.md) (EN) · [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — logprobs / SWE skeleton pointers (parent of `Code/`).
+- **Usage index:** [USAGE.md](../USAGE.md) (EN) · [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — SWE-bench Lite driver, logprobs, demo (parent of `Code/`).
 - First-time API check: `concord doctor` (verifies keys / client init; no chat call).
 
 ## Environment variables

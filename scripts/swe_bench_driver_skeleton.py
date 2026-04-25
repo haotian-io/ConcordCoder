@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-SWE-bench-scale driver — **skeleton only** (RQ1 large-benchmark track).
+SWE-bench-scale driver — **skeleton only** (status JSON for CI / notebooks).
 
-This script does **not** run SWE-bench by default. It documents env vars and
-optional dependencies, and prints a one-line JSON status for CI / notebooks.
+For the **implemented** SWE-bench Lite path (HF ``SWE-bench/SWE-bench_Lite`` →
+``run_single_task``), use ``scripts/swe_bench_batch.py`` and
+``experiments/DEMO_SWE_BENCH_LITE.md``.
 
-Per ``Paper/main.tex`` §limitations:benchmarks and the project summary appendix A (roadmap) §2,
-full SWE-bench integration is **parallel** to ``scripts/mini_eval.py``, not a replacement.
+This file does **not** run instances by default; it documents env vars and
+prints a one-line JSON status. Official Docker ``run_evaluation`` is described
+in ``experiments/SWE_HARNESS_APPENDIX.md``.
 
-Planned usage (after you wire a runner):
+Planned usage:
   export SWE_INSTANCE_IDS=...   # optional comma-separated subset
   python3 scripts/swe_bench_driver_skeleton.py --dry-run
 
