@@ -20,7 +20,7 @@ Like `concord once`, you need `OPENAI_API_KEY` (or `ANTHROPIC_API_KEY`); optiona
 ## Example
 
 ```bash
-cd /path/to/ConcordCoder/Code   # directory with pyproject.toml
+cd /path/to/ConcordCoder   # repository root (pyproject.toml)
 pip install -e ".[dev,openai]"
 
 export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo

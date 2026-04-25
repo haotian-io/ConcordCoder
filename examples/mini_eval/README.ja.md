@@ -20,7 +20,7 @@
 ## 例
 
 ```bash
-cd /path/to/ConcordCoder/Code   # pyproject.toml がある階層
+cd /path/to/ConcordCoder   # リポジトリ根（pyproject.toml）
 pip install -e ".[dev,openai]"
 
 export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo

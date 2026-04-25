@@ -8,7 +8,7 @@
 
 This repository is the installable Python package. After cloning, work from the repository root (where `pyproject.toml` lives) and run `pip install -e .`.
 
-Research assets (papers, session logs, or parent-folder notes) are not required at runtime; they are optional context for the project narrative.
+Assets outside this repository (e.g. a separate paper checkout) are not required at runtime.
 
 ## Core pipeline
 
@@ -46,8 +46,7 @@ pip install -e ".[dev,all]"
 
 ## Documentation
 
-- **[../项目全面总结.md](../项目全面总结.md)** — project overview plus appendices A–D (roadmap, pilot notes, research plan, task guide). Markdown is **not** kept under `Code/docs/`.
-- **Usage index:** [USAGE.md](../USAGE.md) (EN) · [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — SWE-bench Lite driver, logprobs, demo (parent of `Code/`).
+- **[Evaluation & benchmarks](docs/EVALUATION.md)** — SWE-bench Lite driver, `mini_eval`, probing / logprobs tables, and reproducibility pointers (all paths in-repo).
 - First-time API check: `concord doctor` (verifies keys / client init; no chat call).
 
 ## Environment variables
@@ -106,10 +105,10 @@ concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
 
 **Mini evaluation (`mini_eval.py`):** runs three variants on a **real repo you
 supply** plus **task YAMLs you supply**; prints one JSON object to stdout. No
-no sample project is bundled; see [`examples/mini_eval/README.md`](examples/mini_eval/README.md) ([zh](examples/mini_eval/README.zh-CN.md) · [ja](examples/mini_eval/README.ja.md)).
+sample project is bundled; see [`examples/mini_eval/README.md`](examples/mini_eval/README.md) ([zh](examples/mini_eval/README.zh-CN.md) · [ja](examples/mini_eval/README.ja.md)).
 
 ```bash
-cd /path/to/ConcordCoder/Code
+cd /path/to/ConcordCoder
 export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
 export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
 python3 scripts/mini_eval.py
@@ -179,10 +178,10 @@ pytest -v
 
 Covers, among other things: AST/call graph/test extraction, `BundleBuilder`, alignment stubs, `ConstrainedGenerator` stubs, end-to-end pipeline, JSON output parsing, and `concord once`–related helpers.
 
-## Research
+## Research questions (summary)
 
-See [`../项目全面总结.md`](../项目全面总结.md) — **Appendix C** (research plan, RQ1–RQ3).
+Formal definitions, human-study protocol, and full claims appear in the **accompanying paper**. This repository ships **reproducible drivers** for the automated track; see [docs/EVALUATION.md](docs/EVALUATION.md).
 
-- **RQ1:** Does ConcordCoder improve code generation quality (e.g. SWE-bench–style evals)?
-- **RQ2:** Subjective and objective impact on user understanding?
-- **RQ3:** Cost–benefit of dialogue (turns vs. edit/debug cycles)?
+- **RQ1:** Code generation quality (e.g. SWE-bench–style repository tasks).
+- **RQ2:** Impact on user understanding (subjective and objective measures in the paper).
+- **RQ3:** Cost–benefit of alignment dialogue (turns vs. downstream effort).

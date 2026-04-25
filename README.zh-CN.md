@@ -8,9 +8,7 @@
 
 本仓库即为可安装的 Python 包：克隆后请在**仓库根目录**（含 `pyproject.toml` 处）执行 `pip install -e .`。
 
-若你的工作区是嵌套结构（例如上层另有 `Paper/`、笔记等），那些资产不参与 `concord` 运行，仅作研究或文档用途。
-
-**用户研究（VS Code）**：不向应用商店发布时，可使用与 `Code/` 同级的薄壳扩展目录 **`../vscode-concordcoder/`**（`npm run compile` 后 `npx vsce package` 生成 `.vsix`）；说明见其中 `README.md`。
+若你的工作区另有论文仓库、笔记等，那些资产不参与 `concord` 运行。IDE 集成（如 VS Code 扩展）若由项目单独分发，以发布方说明为准；**本仓库不包含**扩展源码。
 
 ## 核心思路
 
@@ -43,10 +41,9 @@ pip install -e ".[git]"
 pip install -e ".[dev,all]"
 ```
 
-## 文档索引
+## 文档
 
-- **[项目全面总结.md](../项目全面总结.md)**：项目总览与 **附录 A–D**（研究路线、外测说明、研究方案 RQ、个人任务指南）；**不在** `Code/docs/` 维护 Markdown。  
-- **使用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — 与 `Code/` 同级：SWE-bench Lite、logprobs、demo 等。  
+- **[评测与复现](docs/EVALUATION.md)**：SWE-bench Lite 驱动、`mini_eval`、探针 / logprobs 表等（**均在仓库内**，无父目录依赖）。  
 - 首次检查 API 配置：运行 **`concord doctor`**（只初始化客户端，不发起聊天请求）。
 
 ## 环境变量
@@ -99,14 +96,14 @@ concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
   --symbol my_function \
   --use-anchor --with-probe
 
-# OpenAI 下使用真实 chat logprobs（失败则回退 mock；见 ../USAGE.zh-CN.md）
+# OpenAI 下使用真实 chat logprobs（失败则回退 mock；见 docs/EVALUATION.md 与 experiments/probing_hyperparams*.md）
 # export CONCORD_REAL_LOGPROBS=1
 ```
 
 **机评脚本 `mini_eval.py`（artifact / 回归）**：对你**自备的真实仓库**与**自备任务 YAML 目录**跑三个变体，向 stdout 打印 JSON。仓库内不再附带示例项目；说明见 [`examples/mini_eval/README.zh-CN.md`](examples/mini_eval/README.zh-CN.md)（[en](examples/mini_eval/README.md) / [ja](examples/mini_eval/README.ja.md)）。
 
 ```bash
-cd /path/to/ConcordCoder/Code   # 含 pyproject.toml
+cd /path/to/ConcordCoder   # 含 pyproject.toml 的仓库根
 export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
 export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
 python3 scripts/mini_eval.py
@@ -145,9 +142,9 @@ concord align /path/to/repo --task "..."
 pytest -v
 ```
 
-## 研究方案
+## 研究问题（摘要）
 
-详见仓库上级 [`项目全面总结.md`](../项目全面总结.md) 中的 **附录 C：研究方案详稿**（**RQ1–RQ3** 与论文叙事一致）。
+**RQ1–RQ3** 的正式定义、用户研究方案与完整主张见**随附论文**。本仓库提供自动化评测轨道的**可复现驱动**，见 [docs/EVALUATION.md](docs/EVALUATION.md)。
 
 ---
 

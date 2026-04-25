@@ -20,7 +20,7 @@
 ## 示例
 
 ```bash
-cd /path/to/ConcordCoder/Code   # 含 pyproject.toml
+cd /path/to/ConcordCoder   # 仓库根（含 pyproject.toml）
 pip install -e ".[dev,openai]"
 
 export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo

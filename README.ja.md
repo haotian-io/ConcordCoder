@@ -8,7 +8,7 @@
 
 本リポジトリがそのままインストール可能な Python パッケージです。クローン後は **`pyproject.toml` があるリポジトリ根**で `pip install -e .` を実行してください。
 
-親ディレクトリの論文・メモ等は実行時には不要で、研究・ドキュメント用の資産として任意です。
+本リポジトリ外の論文チェックアウト等は実行時には不要です。
 
 ## 全体パイプライン
 
@@ -43,8 +43,7 @@ pip install -e ".[dev,all]"
 
 ## ドキュメント
 
-- **[../项目全面总结.md](../项目全面总结.md)** — 全体説明と付録 A–D（ロードマップ、外測、研究計画、タスクガイド）。`Code/docs/` には置きません。  
-- **利用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — `Code/` の親：SWE-bench Lite、logprobs、demo 等。  
+- **[評価とベンチマーク](docs/EVALUATION.md)** — SWE-bench Lite ドライバ、`mini_eval`、probing / logprobs 表など（**本リポジトリ内**のパスのみ）。  
 - 初回は **`concord doctor`** で API キーとクライアント初期化を確認（チャットは送りません）。
 
 ## 環境変数
@@ -102,7 +101,7 @@ concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
 **ミニ評価 `mini_eval.py`（artifact / 回帰）**：ユーザーが用意した**実リポジトリ**と**タスク YAML 群**に対し 3 バリエーションを実行し、JSON を標準出力へ。サンプルリポジトリは同梱しません。手順は [`examples/mini_eval/README.ja.md`](examples/mini_eval/README.ja.md)（[en](examples/mini_eval/README.md) / [zh](examples/mini_eval/README.zh-CN.md)）。
 
 ```bash
-cd /path/to/ConcordCoder/Code
+cd /path/to/ConcordCoder
 export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
 export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
 python3 scripts/mini_eval.py
@@ -141,9 +140,9 @@ concord align /path/to/repo --task "..."
 pytest -v
 ```
 
-## 研究
+## 研究（要約）
 
-詳細は親ディレクトリの [`項目全面总结.md`](../项目全面总结.md) の **付録 C（研究方案）**（RQ1–RQ3）。
+RQ1–RQ3 の定義、ユーザスタディ、主張の全体は**付随する論文**を参照してください。自動評価トラックの再現用ドライバは [docs/EVALUATION.md](docs/EVALUATION.md) にまとめています。
 
 ---
 
