@@ -1,7 +1,0 @@
-# 黄金任务 04
-id: gold_04
-task: "（填写）"
-target_file: src/placeholder_module.py
-target_symbol: placeholder_function
-dependency_level: file-runnable
-alignment_answers: {}

@@ -27,11 +27,11 @@
 | `temperature` | `0.2` | 与 RQ1 Direct 基线脚本**同一**温度（见 `experiments/baseline_direct.py` 环境变量） |
 | `max_tokens` | `4096` | 若与基线可比，在表中注明 |
 
-## 4. 黄金任务集
+## 4. 评测任务（每跑一行一条）
 
-与 [`gold_tasks/README.zh-CN.md`](gold_tasks/README.zh-CN.md) 中勾选的任务 id 一一对应（[en](gold_tasks/README.md) / [ja](gold_tasks/README.ja.md)）；同一次投稿仅保留**一张**本表，避免多版本混淆。
+行应与**实际跑过**的任务标识一一对应：例如自备任务 YAML 里的 `id`（见 [`examples/mini_eval/`](examples/mini_eval/README.zh-CN.md)），或 SWE-bench 的 `instance_id`（[`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py)、[`swe_tiny_config.yaml`](swe_tiny_config.yaml)）。同一次投稿仅保留**一张**本表，避免多版本混淆。
 
 | 任务 id | confidence_threshold | churn_alpha | max_probes | CONCORD_REAL_LOGPROBS | 备注 |
 |---------|----------------------|------------|------------|------------------------|------|
-| （例 gold_01） | 0.45 | 0.6 | 3 | 1 | |
+| （例 `django__django-11099` 或 YAML 内 `id`） | 0.45 | 0.6 | 3 | 1 | |
 | … | | | | | |

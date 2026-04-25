@@ -27,11 +27,11 @@
 | `temperature` | `0.2` | RQ1 直接ベースライン（`experiments/baseline_direct.py` の環境変数）と**同じ** |
 | `max_tokens` | `4096` | 比較条件を変えたなら表に記す |
 
-## 4. ゴールドタスク集合
+## 4. 評価タスク（実行ごとに 1 行）
 
-行は [`gold_tasks/README.ja.md`](gold_tasks/README.ja.md) でチェックしたタスク id と 1:1 対応（[en](gold_tasks/README.md) / [zh](gold_tasks/README.zh-CN.md)）。投稿ごとに**表は 1 枚**に揃え、版が混在しないよう注意。
+行は**実際に実行した**タスク識別子と対応させる。例：手元 YAML の `id`（[`examples/mini_eval/`](examples/mini_eval/README.ja.md)）、または SWE-bench の `instance_id`（[`scripts/swe_bench_batch.py`](../scripts/swe_bench_batch.py)、[`swe_tiny_config.yaml`](swe_tiny_config.yaml)）。投稿ごとに**表は 1 枚**に揃え、版が混在しないよう注意。
 
 | タスク id | confidence_threshold | churn_alpha | max_probes | CONCORD_REAL_LOGPROBS | 備考 |
 |-----------|----------------------|------------|------------|------------------------|------|
-|（例 gold_01）| 0.45 | 0.6 | 3 | 1 | |
+|（例 `django__django-11099` または YAML の `id`）| 0.45 | 0.6 | 3 | 1 | |
 | … | | | | | |
