@@ -46,7 +46,7 @@ pip install -e ".[dev,all]"
 ## 文档索引
 
 - **[项目全面总结.md](../项目全面总结.md)**：项目总览与 **附录 A–D**（研究路线、外测说明、研究方案 RQ、个人任务指南）；**不在** `Code/docs/` 维护 Markdown。  
-- **使用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — 与 `Code/` 同级的使用索引、logprobs / SWE skeleton 等。  
+- **使用索引**：[USAGE.md](../USAGE.md)（EN）· [USAGE.zh-CN.md](../USAGE.zh-CN.md) · [USAGE.ja.md](../USAGE.ja.md) — 与 `Code/` 同级：SWE-bench Lite、logprobs、demo 等。  
 - 首次检查 API 配置：运行 **`concord doctor`**（只初始化客户端，不发起聊天请求）。
 
 ## 环境变量
