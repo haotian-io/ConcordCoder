@@ -38,3 +38,6 @@ eggs/
 # ConcordCoder output
 CONCORD_PLAN.md
 context.json
+
+# Local SWE-bench eval clones (see scripts/run_rq1_sample.sh)
+.rq1_repos/
