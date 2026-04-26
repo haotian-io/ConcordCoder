@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from concordcoder.pipeline import run_single_task
 from concordcoder.schemas import OutputFormat, SingleTaskSpec
 from tests.conftest import StubLLM
