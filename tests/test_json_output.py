@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 
 from concordcoder.generation.constrained_gen import ConstrainedGenerator
-from concordcoder.generation.json_output import parse_json_generation_response, parse_unified_diff_response
+from concordcoder.generation.json_output import (
+    parse_json_generation_response,
+    parse_unified_diff_response,
+    paths_from_unified_diff,
+)
 from concordcoder.pipeline import run_single_task, write_single_task_artifacts
 from concordcoder.schemas import (
     OutputFormat,
@@ -41,6 +45,18 @@ def test_parse_unified_diff_response_fence() -> None:
 ```"""
     d = parse_unified_diff_response(t)
     assert "+++ b/f.py" in d
+
+
+def test_paths_from_unified_diff_git_and_plus() -> None:
+    t = """diff --git a/src/flask/blueprints.py b/src/flask/blueprints.py
+--- a/src/flask/blueprints.py
++++ b/src/flask/blueprints.py
+@@ -1,1 +1,2 @@
+ x
+"""
+    p = paths_from_unified_diff(t)
+    assert "src/flask/blueprints.py" in p
+    assert len(p) == 1
 
 
 def test_constrained_gen_json_mode_mock_llm() -> None:

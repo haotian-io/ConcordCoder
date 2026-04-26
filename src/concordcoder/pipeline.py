@@ -192,6 +192,11 @@ def run_single_task(
     parsed = list(result.structured_files)
     udiff = result.unified_diff_text or ""
 
+    p_tok: int | None = None
+    c_tok: int | None = None
+    if hasattr(llm_client, "drain_token_usage"):
+        p_tok, c_tok = llm_client.drain_token_usage()  # type: ignore[union-attr]
+
     return SingleTaskResult(
         spec=spec,
         generation=result,
@@ -202,6 +207,8 @@ def run_single_task(
         cost=CostMetrics(
             online_runtime_sec=online_align_sec + online_gen_sec,
             online_turns=max(0, len(alignment.turn_log)),
+            online_prompt_tokens=p_tok,
+            online_completion_tokens=c_tok,
             offline_extract_sec=offline_extract_sec,
             offline_git_sec=builder.timings.get("git_sec", 0.0),
             offline_analysis_sec=builder.timings.get("ast_sec", 0.0) + builder.timings.get("test_sec", 0.0),

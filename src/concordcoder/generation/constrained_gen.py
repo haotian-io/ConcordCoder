@@ -12,6 +12,7 @@ from concordcoder.generation.anchor_pipeline import merge_assembly_for_prompt
 from concordcoder.generation.json_output import (
     parse_json_generation_response,
     parse_unified_diff_response,
+    paths_from_unified_diff,
 )
 from concordcoder.schemas import (
     Constraint,
@@ -238,10 +239,16 @@ class ConstrainedGenerator:
     ) -> list[str]:
         if fmt == OutputFormat.JSON_FILES and structured:
             return [f.path for f in structured[:20]]
-        if fmt == OutputFormat.UNIFIED_DIFF and unified_diff:
+        if fmt == OutputFormat.UNIFIED_DIFF:
             import re
 
-            paths = re.findall(r"^\+\+\+ b/(.+)$", unified_diff, re.MULTILINE)
+            u = (unified_diff or "").strip()
+            paths = paths_from_unified_diff(u)
+            if not paths and code_text:
+                paths = paths_from_unified_diff(code_text)
+            if paths:
+                return paths[:20]
+            paths = re.findall(r"^\+\+\+ b/(.+?)\s*$", u, re.MULTILINE) if u else []
             return list(dict.fromkeys(paths))[:20]
         changed = []
         for snip in bundle.snippets:

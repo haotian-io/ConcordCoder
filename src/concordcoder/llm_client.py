@@ -57,6 +57,8 @@ class LLMClient:
             self._client = self._init_anthropic()
         else:
             raise ValueError(f"Unsupported backend: {backend}. Choose 'openai' or 'anthropic'.")
+        self._usage_prompt_tokens: int = 0
+        self._usage_completion_tokens: int = 0
 
     # ------------------------------------------------------------------
     # Public API
@@ -105,7 +107,27 @@ class LLMClient:
         choice = response.choices[0]
         text = (choice.message.content or "").strip()
         tokens = parse_openai_logprobs(response)
+        self._accumulate_usage(response)
         return text, tokens
+
+    def drain_token_usage(self) -> tuple[int | None, int | None]:
+        """Return (prompt, completion) sums for the OpenAI-compatible backend since last drain."""
+        if self.backend != "openai":
+            return None, None
+        p, c = self._usage_prompt_tokens, self._usage_completion_tokens
+        self._usage_prompt_tokens = 0
+        self._usage_completion_tokens = 0
+        if p == 0 and c == 0:
+            return None, None
+        return p, c
+
+    def _accumulate_usage(self, response: object) -> None:
+        u = getattr(response, "usage", None)
+        if u is None:
+            return
+        # OpenAI: prompt_tokens, completion_tokens; some gateways omit fields
+        self._usage_prompt_tokens += int(getattr(u, "prompt_tokens", None) or 0)
+        self._usage_completion_tokens += int(getattr(u, "completion_tokens", None) or 0)
 
     def chat_json(self, messages: list[dict[str, str]], system: str = "") -> Any:
         """Like ``chat`` but parse the response as JSON."""
@@ -151,6 +173,7 @@ class LLMClient:
             )
         except Exception as e:
             raise RuntimeError(f"OpenAI API request failed: {e}") from e
+        self._accumulate_usage(response)
         return response.choices[0].message.content or ""
 
     def _init_anthropic(self):

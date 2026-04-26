@@ -70,9 +70,38 @@ def parse_json_generation_response(
 
 
 def parse_unified_diff_response(raw: str) -> str:
-    """Return diff text, stripping optional markdown fence."""
+    """Return diff text, stripping optional markdown fence and leading prose."""
     t = raw.strip()
-    m = re.search(r"^```(?:diff|patch)?\s*\n(.*?)```", t, re.DOTALL)
+    m = re.search(r"```(?:diff|patch|text)?\s*\n(.*?)```", t, re.DOTALL)
     if m:
-        return m.group(1).strip()
-    return t
+        t = m.group(1).strip()
+    t = t.replace("\r\n", "\n")
+    if not re.search(r"(?m)(?:^diff --git |^\+\+\+ b/)", t):
+        for start_pat in (r"(?m)^diff --git a/\S+ b/\S+.*$", r"(?m)^--- a/(.+)$"):
+            mm = re.search(start_pat, t)
+            if mm:
+                t = t[mm.start() :]
+                break
+    return t.strip()
+
+
+def paths_from_unified_diff(text: str) -> list[str]:
+    """Collect changed file paths from a unified diff (``+++ b/`` and ``git diff`` headers)."""
+    if not text or not text.strip():
+        return []
+    text = text.replace("\r\n", "\n")
+    out: list[str] = []
+    for line in text.splitlines():
+        line = line.rstrip()
+        m = re.match(r"^\+\+\+ b/(\S+)", line)
+        if m:
+            p = m.group(1).strip()
+            if p != "/dev/null":
+                out.append(p)
+            continue
+        m = re.match(r"^diff --git a/(\S+) b/(\S+)", line)
+        if m:
+            p = m.group(2).strip()
+            if p != "/dev/null":
+                out.append(p)
+    return list(dict.fromkeys(out))[:32]

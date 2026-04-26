@@ -91,6 +91,45 @@ def _list_ids(n: int, split: str = _DEFAULT_SPLIT) -> list[str]:
     return [r["instance_id"] for r in rows[:n]]
 
 
+# ── RQ1 path metrics ───────────────────────────────────────────────────────
+
+def _norm_relpath(p: str) -> str:
+    """Normalize ``a/foo``, ``b/foo`` → ``foo`` for SWE file matching."""
+    p = (p or "").replace("\\", "/").strip()
+    if p in ("/dev/null", "dev/null"):
+        return ""
+    for prefix in ("a/", "b/"):
+        if p.startswith(prefix) and len(p) > 2 and p[2:3] not in ("/",):
+            p = p[2:]
+    return p.lstrip("./")
+
+
+def _predicted_paths_from_task(st) -> list[str]:
+    """``parsed_files`` (json_files) + ``changed_files`` + diff heuristics."""
+    from concordcoder.generation.json_output import paths_from_unified_diff
+
+    out: list[str] = []
+    for f in st.parsed_files or []:
+        if getattr(f, "path", ""):
+            out.append(f.path)
+    out.extend(st.generation.changed_files or [])
+    u = (st.unified_diff or st.generation.unified_diff_text or "").strip()
+    if u:
+        out.extend(paths_from_unified_diff(u))
+    raw = (st.generation.code_plan or "").strip()
+    if not out and raw:
+        out.extend(paths_from_unified_diff(raw))
+    return list(dict.fromkeys([p for p in out if p]))[:50]
+
+
+def _file_hit_rate(pred: list[str], gold: list[str]) -> float:
+    gs = {_norm_relpath(x) for x in gold if x and _norm_relpath(x)}
+    if not gs:
+        return 0.0
+    hit = sum(1 for p in pred if _norm_relpath(p) in gs)
+    return hit / len(gs)
+
+
 # ── Patch 解析 ───────────────────────────────────────────────────────────────
 
 def _first_path_from_patch(patch: str) -> str | None:
@@ -126,7 +165,7 @@ def _print_meta(inst: dict) -> None:
     print(f"problem_len : {len(inst.get('problem_statement', ''))}")
     if repo and bc:
         name = repo.split("/")[-1]
-        print(f"\n# Checkout command:")
+        print("\n# Checkout command:")
         print(f"git clone https://github.com/{repo}.git {name} && cd {name} && git checkout {bc}")
         print(f"export CONCORD_SWE_REPO_ROOT=$(pwd)/{name}")
 
@@ -172,11 +211,8 @@ def run_concordcoder(inst: dict, repo_root: Path, llm) -> dict:
     elapsed = time.time() - t0
 
     target_files_gold = _all_paths_from_patch(inst.get("patch") or "")
-    pred_files = st.parsed_files if st.parsed_files else []
-    pred_paths = [f.path for f in pred_files]
-    # 文件命中率：预测文件中有多少出现在 gold patch 里
-    hit = sum(1 for p in pred_paths if p in target_files_gold)
-    file_hit_rate = hit / max(len(target_files_gold), 1)
+    pred_paths = _predicted_paths_from_task(st)
+    file_hit_rate = _file_hit_rate(pred_paths, target_files_gold)
 
     return {
         "condition": "concordcoder",
@@ -187,6 +223,7 @@ def run_concordcoder(inst: dict, repo_root: Path, llm) -> dict:
         "target_files_gold": target_files_gold,
         "predicted_files": pred_paths,
         "file_hit_rate": file_hit_rate,
+        "n_predicted_paths": len(pred_paths),
         "code_plan_len": len(st.generation.code_plan or ""),
         "unified_diff_len": len(st.generation.unified_diff_text or ""),
         "warnings_n": len(st.generation.warnings),
@@ -228,10 +265,8 @@ def run_baseline(inst: dict, repo_root: Path, llm) -> dict:
     elapsed = time.time() - t0
 
     target_files_gold = _all_paths_from_patch(inst.get("patch") or "")
-    pred_files = st.parsed_files if st.parsed_files else []
-    pred_paths = [f.path for f in pred_files]
-    hit = sum(1 for p in pred_paths if p in target_files_gold)
-    file_hit_rate = hit / max(len(target_files_gold), 1)
+    pred_paths = _predicted_paths_from_task(st)
+    file_hit_rate = _file_hit_rate(pred_paths, target_files_gold)
 
     return {
         "condition": "baseline_direct",
@@ -242,6 +277,7 @@ def run_baseline(inst: dict, repo_root: Path, llm) -> dict:
         "target_files_gold": target_files_gold,
         "predicted_files": pred_paths,
         "file_hit_rate": file_hit_rate,
+        "n_predicted_paths": len(pred_paths),
         "code_plan_len": len(st.generation.code_plan or ""),
         "unified_diff_len": len(st.generation.unified_diff_text or ""),
         "warnings_n": len(st.generation.warnings),
@@ -284,9 +320,8 @@ def run_baseline_posthoc(inst: dict, repo_root: Path, llm) -> dict:
     st = run_single_task(repo_root, spec, llm_client=llm, fast_extract=False)
     elapsed = time.time() - t0
     target_files_gold = _all_paths_from_patch(inst.get("patch") or "")
-    pred_paths = [f.path for f in (st.parsed_files if st.parsed_files else [])]
-    hit = sum(1 for p in pred_paths if p in target_files_gold)
-    file_hit_rate = hit / max(len(target_files_gold), 1)
+    pred_paths = _predicted_paths_from_task(st)
+    file_hit_rate = _file_hit_rate(pred_paths, target_files_gold)
     return {
         "condition": "baseline_posthoc",
         "instance_id": iid,
@@ -296,6 +331,7 @@ def run_baseline_posthoc(inst: dict, repo_root: Path, llm) -> dict:
         "target_files_gold": target_files_gold,
         "predicted_files": pred_paths,
         "file_hit_rate": file_hit_rate,
+        "n_predicted_paths": len(pred_paths),
         "code_plan_len": len(st.generation.code_plan or ""),
         "unified_diff_len": len(st.generation.unified_diff_text or ""),
         "warnings_n": len(st.generation.warnings),
