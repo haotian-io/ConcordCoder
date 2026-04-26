@@ -1,0 +1,1 @@
+run_id,task_id,method,model_backend,online_runtime_sec,online_turns,online_prompt_tokens,online_completion_tokens,offline_extract_sec,offline_git_sec,offline_analysis_sec,total_runtime_sec,passed_tests,regression_count,artifact_quality_score,user_confidence_score,notes

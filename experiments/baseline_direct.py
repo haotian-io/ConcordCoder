@@ -87,6 +87,12 @@ def main() -> None:
         "temperature": client.temperature,
         "max_tokens": client.max_tokens,
         "reply_len": len(reply or ""),
+        "fairness_budget": {
+            "max_turns": int(os.environ.get("CONCORD_FAIR_MAX_TURNS", "3")),
+            "max_prompt_tokens": int(os.environ.get("CONCORD_FAIR_MAX_PROMPT_TOKENS", "4000")),
+            "max_completion_tokens": int(os.environ.get("CONCORD_FAIR_MAX_COMPLETION_TOKENS", "4000")),
+            "max_wallclock_sec": int(os.environ.get("CONCORD_FAIR_MAX_WALLCLOCK_SEC", "300")),
+        },
     }
     print(json.dumps(out, ensure_ascii=False))
     print("---REPLY-START---", file=sys.stderr)

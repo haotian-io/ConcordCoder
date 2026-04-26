@@ -243,15 +243,8 @@ class BundleBuilder:
         snippets: list[SnippetRef] = []
         skip = {".git", "node_modules", ".venv", "venv", "__pycache__", "dist", "build"}
 
-        scanned = 0
-        for root, dirs, files in sorted(
-            (entry for entry in self.repo_root.walk() if True),
-            key=lambda x: str(x[0]),
-        ) if hasattr(self.repo_root, "walk") else self._os_walk():
-            pass
-
-        # cross-compatible path walk
         import os
+        scanned = 0
         for root, dirs, files in os.walk(self.repo_root):
             dirs[:] = [d for d in dirs if d not in skip and not d.startswith(".")]
             for name in files:
@@ -294,9 +287,6 @@ class BundleBuilder:
         snippets.sort(key=lambda s: s.relevance_score, reverse=True)
         return snippets
 
-    def _os_walk(self):
-        import os
-        return os.walk(self.repo_root)
 
     def _structural_facts(self, analyses, cg_builder: CallGraphBuilder, tokens: set[str]) -> list[str]:
         facts: list[str] = []

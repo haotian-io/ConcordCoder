@@ -130,6 +130,12 @@ def main() -> None:
 
     rows: list[dict] = []
     pyt = _pytest_summary(repo)
+    fairness_budget = {
+        "max_turns": int(os.environ.get("CONCORD_FAIR_MAX_TURNS", "3")),
+        "max_prompt_tokens": int(os.environ.get("CONCORD_FAIR_MAX_PROMPT_TOKENS", "4000")),
+        "max_completion_tokens": int(os.environ.get("CONCORD_FAIR_MAX_COMPLETION_TOKENS", "4000")),
+        "max_wallclock_sec": int(os.environ.get("CONCORD_FAIR_MAX_WALLCLOCK_SEC", "300")),
+    }
 
     try:
         llm = get_llm_client()
@@ -171,6 +177,11 @@ def main() -> None:
                     "code_plan_len": len(st.generation.code_plan or ""),
                     "probe": st.probe,
                     "n_parsed_files": len(st.parsed_files),
+                    "fairness_budget": fairness_budget,
+                    "alignment_turn_log_n": len(st.alignment_turn_log),
+                    "artifact_quality_score": st.artifact_quality_score,
+                    "user_confidence_score": st.user_confidence_score,
+                    "cost": st.cost.model_dump(mode="json"),
                 }
             )
 

@@ -2,13 +2,13 @@
 
 This module implements Contribution 2 of ConcordCoder:
   - Estimates LLM generation confidence at AST node level via token logprobs
-  - Weights low-confidence nodes by Git churn rate (historical hotspots)
+  - Weights low-confidence nodes by multi-factor structural risk
   - Generates targeted probe questions for uncertain + high-risk code regions
   - Triggers selective re-generation only for flagged spans (not full restart)
 
 Comparison with InlineCoder (arXiv:2601.00376):
   - InlineCoder:  perplexity → automatic upstream/downstream retrieval (no human)
-  - ConcordCoder: perplexity + git_churn → human probe question → confirmed constraint
+  - ConcordCoder: perplexity + structural hotspot score → probe question
                   → targeted re-generation of the uncertain span
 
 API:
@@ -62,7 +62,8 @@ class ProbeTarget:
     span: ASTSpan
     confidence: float           # in [0, 1]
     git_churn: float            # normalized [0, 1]; 0 = never modified
-    hotspot_score: float        # (1 - confidence) * (1 + α * git_churn)
+    hotspot_score: float
+    risk_components: dict[str, float] = field(default_factory=dict)
     probe_question: str = ""    # generated probe text
 
 
@@ -85,13 +86,14 @@ class ProbingEngine:
         llm_client: Optional LLMClient (used only for probe question generation).
         bundle: ContextBundle from Phase 1; provides git_churn data.
         confidence_threshold: Spans below this confidence trigger probing.
-        churn_alpha: Weight of git churn in hotspot_score.
+        churn_alpha: Scaling coefficient for churn contribution.
         max_probes: Maximum number of probe questions to generate per run.
     """
 
     DEFAULT_CONFIDENCE_THRESHOLD = 0.45
     DEFAULT_CHURN_ALPHA = 0.6
     DEFAULT_MAX_PROBES = 3
+    DEFAULT_SCORE_THETA = 0.50
 
     def __init__(
         self,
@@ -100,12 +102,24 @@ class ProbingEngine:
         confidence_threshold: float = DEFAULT_CONFIDENCE_THRESHOLD,
         churn_alpha: float = DEFAULT_CHURN_ALPHA,
         max_probes: int = DEFAULT_MAX_PROBES,
+        score_theta: float = DEFAULT_SCORE_THETA,
+        top_n: int | None = None,
+        w_churn: float = 0.40,
+        w_centrality: float = 0.25,
+        w_fan_io: float = 0.20,
+        w_public_api: float = 0.15,
     ) -> None:
         self.llm = llm_client
         self.bundle = bundle
         self.confidence_threshold = confidence_threshold
         self.churn_alpha = churn_alpha
         self.max_probes = max_probes
+        self.score_theta = score_theta
+        self.top_n = top_n
+        self.w_churn = w_churn
+        self.w_centrality = w_centrality
+        self.w_fan_io = w_fan_io
+        self.w_public_api = w_public_api
 
     # ── Main entry point ──────────────────────────────────────────────────
 
@@ -286,25 +300,87 @@ class ProbingEngine:
         git_churn: dict[str, float],
     ) -> list[ProbeTarget]:
         targets: list[ProbeTarget] = []
+        theta = self._dynamic_theta(len(spans))
+        top_n = self.top_n if self.top_n is not None else self.max_probes
         for i, span in enumerate(spans):
             conf = confidences.get(i, 1.0)
             churn = self._span_churn(span, git_churn)
-            score = (1.0 - conf) * (1.0 + self.churn_alpha * churn)
+            centrality = self._span_centrality(span)
+            fan_io = self._span_fan_io(span)
+            public_api = self._span_public_api(span)
+            weighted_risk = (
+                self.w_churn * (self.churn_alpha * churn)
+                + self.w_centrality * centrality
+                + self.w_fan_io * fan_io
+                + self.w_public_api * public_api
+            )
+            score = (1.0 - conf) * (1.0 + weighted_risk)
 
-            if conf < self.confidence_threshold or score > 0.5:
+            if score > theta or conf < self.confidence_threshold:
                 targets.append(
                     ProbeTarget(
                         span=span,
                         confidence=conf,
                         git_churn=churn,
                         hotspot_score=score,
+                        risk_components={
+                            "churn": churn,
+                            "centrality": centrality,
+                            "fan_io": fan_io,
+                            "public_api": public_api,
+                            "theta": theta,
+                        },
                     )
                 )
 
         # Sort by score, deduplicate overlapping spans, cap at max_probes
         targets.sort(key=lambda t: -t.hotspot_score)
         targets = self._deduplicate_overlapping(targets)
-        return targets[: self.max_probes]
+        return targets[: min(top_n, self.max_probes)]
+
+    def _dynamic_theta(self, n_spans: int) -> float:
+        """Adaptive threshold theta(task, budget) for score(n) > theta selection."""
+        complexity = min(1.0, n_spans / 20.0)
+        budget_pressure = min(1.0, self.max_probes / 5.0)
+        theta = self.score_theta - 0.12 * complexity + 0.08 * budget_pressure
+        return max(0.25, min(0.75, theta))
+
+    def _span_centrality(self, span: ASTSpan) -> float:
+        if self.bundle is None or not getattr(self.bundle, "call_graph", None):
+            return 0.0
+        graph = self.bundle.call_graph
+        node = span.node_name
+        out_degree = len(graph.get(node, []))
+        in_degree = sum(1 for _, vs in graph.items() if node in vs)
+        degree = in_degree + out_degree
+        max_degree = max(
+            [len(vs) for vs in graph.values()] + [sum(1 for _, vs in graph.items() if k in vs) for k in graph],
+            default=1,
+        )
+        return min(1.0, degree / max(max_degree, 1))
+
+    def _span_fan_io(self, span: ASTSpan) -> float:
+        if self.bundle is None or not getattr(self.bundle, "call_graph", None):
+            return 0.0
+        graph = self.bundle.call_graph
+        node = span.node_name
+        fan_out = len(graph.get(node, []))
+        fan_in = sum(1 for _, vs in graph.items() if node in vs)
+        return min(1.0, (fan_in + fan_out) / 10.0)
+
+    def _span_public_api(self, span: ASTSpan) -> float:
+        node = span.node_name
+        if node.startswith("_"):
+            return 0.0
+        if self.bundle is None:
+            return 0.5
+        entry_points = set(getattr(self.bundle, "entry_points", []) or [])
+        if node in entry_points:
+            return 1.0
+        for c in getattr(self.bundle, "design_constraints", []) or []:
+            if "public api" in c.description.lower() and node in c.description:
+                return 1.0
+        return 0.5
 
     def _deduplicate_overlapping(self, targets: list[ProbeTarget]) -> list[ProbeTarget]:
         """Remove spans that are substantially contained within a higher-scored span."""

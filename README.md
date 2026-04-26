@@ -47,6 +47,14 @@ pip install -e ".[dev,all]"
 ## Documentation
 
 - **[Evaluation & benchmarks](docs/EVALUATION.md)** — SWE-bench Lite driver, `mini_eval`, probing / logprobs tables, and reproducibility pointers (all paths in-repo).
+- **[Week1 v0 proposal](docs/WEEK1_V0_PROPOSAL.md)** — B-track scoped narrative and claim boundary.
+- **[Experiment protocol v1](docs/EXPERIMENT_PROTOCOL_V1.md)** — fairness controls, RQ metrics, and participant design.
+- **[Cost accounting template](docs/COST_ACCOUNTING_TEMPLATE.md)** — online/offline cost schema.
+- **[Week1 pilot report](docs/WEEK1_PILOT_V0_REPORT.md)** — executed checks and artifact pack.
+- **[Week1 day-by-day checklist](docs/WEEK1_DAY_BY_DAY_CHECKLIST.md)** — daily actions and acceptance criteria.
+- **[Mini eval runbook](docs/MINI_EVAL_RUNBOOK.md)** — real pilot commands and troubleshooting.
+- **[Pilot run log template](docs/templates/pilot_run_log.csv)** — per-run result capture table.
+- **[Security sweep report](docs/SECURITY_SWEEP_REPORT.md)** — secret scan findings and remediation status.
 - First-time API check: `concord doctor` (verifies keys / client init; no chat call).
 
 ## Environment variables

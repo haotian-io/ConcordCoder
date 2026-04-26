@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 
 from concordcoder.alignment.dialogue import AlignmentDialogue
@@ -15,6 +16,7 @@ from concordcoder.schemas import (
     GenerationRequest,
     GenerationResult,
     OutputFormat,
+    CostMetrics,
     SingleTaskResult,
     SingleTaskSpec,
 )
@@ -75,9 +77,11 @@ def run_single_task(
             "OPENAI_BASE_URL) or ANTHROPIC_API_KEY, or pass an LLMClient instance."
         )
     repo_root = Path(repo_root).resolve()
+    t_start = time.perf_counter()
 
     eff_max_files = min(40, 120) if fast_extract else 120
 
+    t_extract_0 = time.perf_counter()
     builder = BundleBuilder(
         repo_root,
         llm_client=llm_client,
@@ -86,13 +90,16 @@ def run_single_task(
         target_symbol=spec.target_symbol,
     )
     bundle = builder.build(spec.task)
+    offline_extract_sec = time.perf_counter() - t_extract_0
 
+    t_align_0 = time.perf_counter()
     if spec.full_align:
         dialogue = LLMAlignmentDialogue(llm_client=llm_client)
         alignment = dialogue.run_batch(bundle, prefilled_answers=spec.answers)
     else:
         legacy = AlignmentDialogue()
         alignment = legacy.draft_record(bundle, spec.answers or None)
+    online_align_sec = time.perf_counter() - t_align_0
 
     if spec.allowlist_paths:
         alignment = alignment.model_copy(update={"allowlist_paths": spec.allowlist_paths})
@@ -178,7 +185,9 @@ def run_single_task(
         output_format=spec.output_format,
         assembly=assembly,
     )
+    t_gen_0 = time.perf_counter()
     result = ConstrainedGenerator(llm_client=llm_client).generate(req)
+    online_gen_sec = time.perf_counter() - t_gen_0
 
     parsed = list(result.structured_files)
     udiff = result.unified_diff_text or ""
@@ -189,6 +198,15 @@ def run_single_task(
         parsed_files=parsed,
         unified_diff=udiff,
         probe=probe_data,
+        alignment_turn_log=list(alignment.turn_log),
+        cost=CostMetrics(
+            online_runtime_sec=online_align_sec + online_gen_sec,
+            online_turns=max(0, len(alignment.turn_log)),
+            offline_extract_sec=offline_extract_sec,
+            offline_git_sec=0.0,
+            offline_analysis_sec=0.0,
+            total_runtime_sec=time.perf_counter() - t_start,
+        ),
     )
 
 

@@ -24,6 +24,29 @@ Environment: `pip install -e ".[eval]"` plus LLM keys; per-instance `git checkou
 
 For OpenAI chat logprobs on anchor paths, set `CONCORD_REAL_LOGPROBS=1` (see table and `LLMClient` in source).
 
+### Hotspot score used in probing
+
+Week1 protocol uses a multi-factor hotspot score:
+
+`score(n) = (1 - confidence(n)) * (1 + w1*churn + w2*centrality + w3*fan_io + w4*public_api)`
+
+Probe selection follows `score(n) > theta(task,budget)` and keeps only Top-N
+targets (N bounded by probing budget).
+
+Current implementation is heuristic and intentionally lightweight; deferred
+signals for later iterations include test-failure linkage, rollback density,
+bug-fix commit density, and coverage-aware priors.
+
 ## Direct baseline (RQ1 comparison script)
 
 - [`experiments/baseline_direct.py`](../experiments/baseline_direct.py) — single-turn baseline using the same LLM budget knobs as documented in the script header.
+- `scripts/rq1_runner.py` also supports `baseline_posthoc` for budget-matched post-hoc comparison.
+
+## Fairness and cost fields in artifacts
+
+`mini_eval.py` and `rq1_runner.py` rows include:
+
+- `fairness_budget` (`max_turns`, prompt/completion token caps, wall-clock cap),
+- `alignment_turn_log_n`,
+- `cost` (`online_*`, `offline_*`, `total_runtime_sec`),
+- optional RQ2 placeholders (`artifact_quality_score`, `user_confidence_score`).

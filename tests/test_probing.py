@@ -202,12 +202,66 @@ def test_flagged_lines_format(engine):
 
 def test_hotspot_score_increases_with_churn():
     """Spans with high git churn should have higher hotspot scores."""
-    conf = 0.5
-    churn_low = 0.0
-    churn_high = 1.0
-    score_low = (1 - conf) * (1 + 1.0 * churn_low)
-    score_high = (1 - conf) * (1 + 1.0 * churn_high)
-    assert score_high > score_low
+    e = ProbingEngine(
+        bundle=ContextBundle(task_summary="x", historical_decisions=["a.py: m1", "a.py: m2"]),
+        confidence_threshold=0.0,
+        churn_alpha=1.0,
+        max_probes=1,
+        w_churn=1.0,
+        w_centrality=0.0,
+        w_fan_io=0.0,
+        w_public_api=0.0,
+    )
+    spans = [ASTSpan(node_type="FunctionDef", node_name="f", start_token=0, end_token=1, file_hint="a.py")]
+    conf = {0: 0.5}
+    churn = {"a.py": 1.0}
+    targets = e._select_probe_targets(spans, conf, churn)
+    assert targets and targets[0].hotspot_score > 0.5
+
+
+def test_dynamic_theta_in_valid_range(engine):
+    theta = engine._dynamic_theta(n_spans=12)
+    assert 0.25 <= theta <= 0.75
+
+
+def test_probe_contains_risk_components(engine):
+    low_conf_tokens = mock_logprobs_from_code(RETRY_CODE, seed_confidence=0.2)
+    result = engine.run(RETRY_CODE, low_conf_tokens)
+    if result.probes:
+        comp = result.probes[0].risk_components
+        assert "churn" in comp
+        assert "centrality" in comp
+        assert "fan_io" in comp
+        assert "public_api" in comp
+
+
+def test_churn_alpha_affects_hotspot_score():
+    spans = [ASTSpan(node_type="FunctionDef", node_name="f", start_token=0, end_token=1, file_hint="a.py")]
+    conf = {0: 0.5}
+    churn = {"a.py": 1.0}
+    low_alpha = ProbingEngine(
+        bundle=ContextBundle(task_summary="x"),
+        churn_alpha=0.2,
+        confidence_threshold=0.0,
+        max_probes=1,
+        w_churn=1.0,
+        w_centrality=0.0,
+        w_fan_io=0.0,
+        w_public_api=0.0,
+    )
+    high_alpha = ProbingEngine(
+        bundle=ContextBundle(task_summary="x"),
+        churn_alpha=1.0,
+        confidence_threshold=0.0,
+        max_probes=1,
+        w_churn=1.0,
+        w_centrality=0.0,
+        w_fan_io=0.0,
+        w_public_api=0.0,
+    )
+    s1 = low_alpha._select_probe_targets(spans, conf, churn)[0].hotspot_score
+    s2 = high_alpha._select_probe_targets(spans, conf, churn)[0].hotspot_score
+    assert s2 > s1
 
 
 # ─── parse_openai_logprobs ───────────────────────────────────────────────────

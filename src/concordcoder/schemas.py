@@ -148,6 +148,20 @@ class GenerationResult(BaseModel):
     unified_diff_text: str = ""
 
 
+class CostMetrics(BaseModel):
+    """Online/offline/human cost accounting fields for fair comparison."""
+
+    online_runtime_sec: float = 0.0
+    online_turns: int = 0
+    online_prompt_tokens: int | None = None
+    online_completion_tokens: int | None = None
+    offline_extract_sec: float = 0.0
+    offline_git_sec: float = 0.0
+    offline_analysis_sec: float = 0.0
+    total_runtime_sec: float = 0.0
+    human_minutes: float | None = None
+
+
 class SingleTaskSpec(BaseModel):
     """Input contract for a single bounded run (e.g. `concord once`)."""
 
@@ -176,3 +190,7 @@ class SingleTaskResult(BaseModel):
     out_dir: str | None = None
     probe: dict[str, Any] = Field(default_factory=dict)
     """Optional ProbingEngine summary (``needs_probing``, questions, etc.)."""
+    alignment_turn_log: list[AlignmentTurnLog] = Field(default_factory=list)
+    artifact_quality_score: float | None = None
+    user_confidence_score: float | None = None
+    cost: CostMetrics = Field(default_factory=CostMetrics)
