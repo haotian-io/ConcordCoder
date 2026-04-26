@@ -47,7 +47,10 @@ class LLMClient:
         self.max_tokens = max_tokens
 
         if self.backend == "openai":
-            self.model = model or "gpt-4o"
+            # OpenAI-compatible gateways (e.g. DeepSeek): set CONCORD_OPENAI_MODEL or OPENAI_MODEL
+            self.model = model or os.environ.get("CONCORD_OPENAI_MODEL") or os.environ.get(
+                "OPENAI_MODEL", "gpt-4o"
+            )
             self._client = self._init_openai()
         elif self.backend == "anthropic":
             self.model = model or "claude-3-5-sonnet-20241022"

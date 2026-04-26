@@ -70,6 +70,8 @@ export OPENAI_BASE_URL=https://example.com/v1
 # export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
+To use a **non-default model name** (e.g. a DeepSeek or other gateway model id), set `CONCORD_OPENAI_MODEL` or `OPENAI_MODEL` (see [`src/concordcoder/llm_client.py`](src/concordcoder/llm_client.py)).
+
 ## Usage
 
 ### `concord once` (single task, good for scripts / CI)
