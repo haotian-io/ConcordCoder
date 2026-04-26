@@ -16,9 +16,11 @@ The scripts `scripts/rq1_runner.py` and `scripts/rq1_analyze.py` implement a **d
 2. **Target repository**: each instance must be checked out at the instance `base_commit`. The recommended layout is a local clone under `.rq1_repos/<repo>/` (ignored by git; not distributed with the repo). Use `python3 scripts/rq1_runner.py --print-meta --instance-id <id>` for the exact `git clone` / `git checkout` commands.
 3. **LLM credentials**: `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. For OpenAI-compatible endpoints, set `OPENAI_BASE_URL` as required by your provider.
 
-**Non-LLM checks** (no API key): `--print-meta` and `--dry-run` validate metadata resolution and spec construction for a given `--instance-id`.
+**Non-LLM checks** (no API key): `--print-meta` and `--dry-run` validate metadata resolution and spec construction for a given `--instance-id`. Script `bash scripts/rq1_tiny_meta_loop.sh` prints clone/checkout for all ids in `experiments/swe_tiny_config.yaml`.
 
-**Full run** (requires keys and a prepared repo): see [results/rq1/README.md](results/rq1/README.md) and `scripts/run_rq1_sample.sh`.
+**Full run** (requires keys and a prepared repo): see [results/rq1/README.md](results/rq1/README.md) and `scripts/run_rq1_sample.sh`. If no key is set, `rq1_runner` exits before any model call; set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` first.
+
+**Plotting / analysis smoke test** (no key): copy `experiments/rq1_smoke_for_analyze.json` to `results/rq1/` and run `scripts/rq1_analyze.py` (synthetic numbers for pipeline validation only).
 
 ## Outputs
 

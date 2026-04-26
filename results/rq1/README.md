@@ -30,6 +30,23 @@ python3 scripts/rq1_analyze.py --results-dir results/rq1 --out-dir results/rq1/p
 
 Requires at least one valid `*.json` from the runner. If no JSON is present, the analyzer exits with a clear message (see script help).
 
+## Validate `rq1_analyze` without an LLM (plotting smoke test)
+
+Copy the committed schema example, then run the analyzer (numbers are **synthetic**; replace with real `rq1_runner` output for any paper table):
+
+```bash
+cp experiments/rq1_smoke_for_analyze.json results/rq1/
+python3 scripts/rq1_analyze.py --results-dir results/rq1 --out-dir results/rq1/plots
+```
+
+## Five demo instances: meta only (no LLM)
+
+To print `git clone` / `git checkout` for every id in `experiments/swe_tiny_config.yaml` (one real `rq1_runner` run still needs a separate checkout per id):
+
+```bash
+bash scripts/rq1_tiny_meta_loop.sh
+```
+
 ## Reference instance
 
 `pallets__flask-4045` is used in documentation as a **smoke** example only; the full benchmark and scaling process are described in [docs/EVALUATION.md](../docs/EVALUATION.md).

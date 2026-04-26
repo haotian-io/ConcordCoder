@@ -1,0 +1,42 @@
+{
+  "driver": "rq1_runner",
+  "split": "test",
+  "instance_id": "pallets__flask-4045",
+  "conditions": [
+    "concordcoder",
+    "baseline"
+  ],
+  "note": "Synthetic rows for testing rq1_analyze / plotting without LLM. Replace with real runner output for research.",
+  "fairness_budget": {
+    "max_turns": 3,
+    "max_prompt_tokens": 4000,
+    "max_completion_tokens": 4000,
+    "max_wallclock_sec": 300
+  },
+  "rows": [
+    {
+      "condition": "concordcoder",
+      "instance_id": "pallets__flask-4045",
+      "repo": "pallets/flask",
+      "base_commit": "d8c37f43724cd9fb0870f77877b7c4c7e38a19e0",
+      "file_hit_rate": 0.85,
+      "elapsed_s": 42.3,
+      "warnings_n": 1,
+      "code_plan_len": 1200,
+      "unified_diff_len": 800,
+      "n_parsed_files": 1
+    },
+    {
+      "condition": "baseline",
+      "instance_id": "pallets__flask-4045",
+      "repo": "pallets/flask",
+      "base_commit": "d8c37f43724cd9fb0870f77877b7c4c7e38a19e0",
+      "file_hit_rate": 0.5,
+      "elapsed_s": 18.0,
+      "warnings_n": 3,
+      "code_plan_len": 400,
+      "unified_diff_len": 200,
+      "n_parsed_files": 1
+    }
+  ]
+}

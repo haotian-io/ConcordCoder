@@ -41,3 +41,7 @@ context.json
 
 # Local SWE-bench eval clones (see scripts/run_rq1_sample.sh)
 .rq1_repos/
+
+# RQ1 runner outputs (regenerate with scripts/rq1_runner.py; README stays tracked)
+results/rq1/*.json
+results/rq1/plots/
