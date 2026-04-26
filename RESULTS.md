@@ -1,41 +1,33 @@
-# ConcordCoder — 可复现状态与 RQ1 抽样
+# Reproducibility and evaluation status
 
-本文档记录「Plan 199-312」对接执行后的**验收型结果**；**全量** SWE 跑批请在本地配置 API key 后按 [docs/EVALUATION.md](docs/EVALUATION.md) 与 [results/rq1/README.md](results/rq1/README.md) 进行。
+This file summarizes **what this repository guarantees for replication** and where to find the full procedures. Formal research questions, human-study design, and paper claims are documented in the **accompanying paper** and in [docs/EXPERIMENT_PROTOCOL_V1.md](docs/EXPERIMENT_PROTOCOL_V1.md). For driver-level details, see [docs/EVALUATION.md](docs/EVALUATION.md).
 
-## 自动化测试
+## Automated tests
 
-- **路径**：本目录（`Code/`）
-- **命令**：`python3 -m pytest -q`
-- **结果**：**49 passed**（以你本机实跑为准）
+| Item | Command | Expected |
+|------|---------|----------|
+| Unit tests | `python3 -m pytest -q` | All tests pass (CI and local should match; run from the repository root next to `pyproject.toml`). |
 
-## RQ1 驱动器（无 API 部分）
+## RQ1 driver (SWE-bench Lite helper scripts)
 
-- `python3 scripts/rq1_runner.py --instance-id pallets__flask-4045 --print-meta`：通过
-- `python3 scripts/rq1_runner.py --instance-id pallets__flask-4045 --dry-run`：通过
-- 本地数据：上级目录 `../SWE-bench_Lite/data/test-00000-of-00001.parquet` 已存在
-- 示例仓库：可在 `.rq1_repos/flask` 使用，**不纳入 git**（见 `.gitignore` 中 `.rq1_repos/`）
+The scripts `scripts/rq1_runner.py` and `scripts/rq1_analyze.py` implement a **documented** comparison workflow (ConcordCoder vs. baselines) on instances from the SWE-bench Lite metadata. They require:
 
-## 有 API 时的一条完整抽样
+1. **Dataset**: local Parquet for the split (default path relative to this repo: `../SWE-bench_Lite/data/…`) or set `SWE_BENCH_LOCAL_DIR`. See [docs/EVALUATION.md](docs/EVALUATION.md).
+2. **Target repository**: each instance must be checked out at the instance `base_commit`. The recommended layout is a local clone under `.rq1_repos/<repo>/` (ignored by git; not distributed with the repo). Use `python3 scripts/rq1_runner.py --print-meta --instance-id <id>` for the exact `git clone` / `git checkout` commands.
+3. **LLM credentials**: `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`. For OpenAI-compatible endpoints, set `OPENAI_BASE_URL` as required by your provider.
 
-```bash
-cd /path/to/this/Code
-export CONCORD_SWE_REPO_ROOT="$PWD/.rq1_repos/flask"
-export OPENAI_API_KEY=...   # 或 ANTHROPIC_API_KEY；OpenAI 兼容：另设 OPENAI_BASE_URL
-./scripts/run_rq1_sample.sh
-python3 scripts/rq1_analyze.py --results-dir results/rq1 --out-dir results/rq1/plots
-```
+**Non-LLM checks** (no API key): `--print-meta` and `--dry-run` validate metadata resolution and spec construction for a given `--instance-id`.
 
-当前环境未设置 `OPENAI_API_KEY` 时，驱动器会在初始化 LLM 前退出；属预期，**不是**数据或路径错误。
+**Full run** (requires keys and a prepared repo): see [results/rq1/README.md](results/rq1/README.md) and `scripts/run_rq1_sample.sh`.
 
-## 全量与论文数字
+## Outputs
 
-在你确认**抽样 JSON / 图**与预期一致后，再扩大 `instance_id` 列表或 `experiments` 配置批量运行，并将最终 `results/rq1/` 与文内表图对齐。此处不预先写入占位数字，以免与真实跑批不一致。
+After a successful run, JSON artifacts are written under `results/rq1/` (filename derived from `instance_id`). Optional plots and CSV summaries are produced by `scripts/rq1_analyze.py`. **We do not commit large result JSON or plots by default**; generate them locally for your replication or paper tables.
 
-## 论文主图
+## Paper assets (sibling `Paper/` checkout)
 
-- 论文仓库中 `Paper/main.tex` 的 pipeline 图已改为使用已有资产 `fig/overview_gpt.png`（原 `overview.pdf` 在仓库中不存在）。
-- 本地完整编译需完整 TeX 环境；若报缺 `algorithmicx.sty` 等，请用发行版包管理器补装或改用 **Overleaf** 编译 `main.tex`。
+The pipeline overview figure in the paper source uses `fig/overview_gpt.png` in the **paper** repository. This **Code** package does not ship the LaTeX tree; use Overleaf or a full TeX installation to build the paper (if a package such as `algorithmicx` is missing locally, install it or use the Overleaf project).
 
-## 安全
+## Security
 
-若曾在笔记中误贴 API 密钥，请已在提供商控制台**轮换**；仓库内不应再出现明文 key。
+**Never commit API keys or tokens.** Use environment variables or your platform’s secret manager. If a key was ever committed to any repository, **revoke and rotate** it in the provider console.

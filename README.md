@@ -47,6 +47,7 @@ pip install -e ".[dev,all]"
 ## Documentation
 
 - **[Evaluation & benchmarks](docs/EVALUATION.md)** — SWE-bench Lite driver, `mini_eval`, probing / logprobs tables, and reproducibility pointers (all paths in-repo).
+- **[Reproducibility & evaluation status](RESULTS.md)** — test expectations, RQ1 artifact layout, and pointers for reviewers replicating the automated track.
 - **[Week1 v0 proposal](docs/WEEK1_V0_PROPOSAL.md)** — B-track scoped narrative and claim boundary.
 - **[Experiment protocol v1](docs/EXPERIMENT_PROTOCOL_V1.md)** — fairness controls, RQ metrics, and participant design.
 - **[Cost accounting template](docs/COST_ACCOUNTING_TEMPLATE.md)** — online/offline cost schema.

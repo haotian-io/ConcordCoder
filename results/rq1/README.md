@@ -1,30 +1,35 @@
-# RQ1 结果目录（`rq1_runner.py` 输出）
+# RQ1 outputs (`results/rq1/`)
 
-## 本环境抽样状态
+This directory is the **default output location** for `scripts/rq1_runner.py`. Files here are **not** part of the source distribution; create them on your machine when replicating the RQ1 workflow described in [docs/EVALUATION.md](../docs/EVALUATION.md).
 
-| 检查项 | 状态 |
-|--------|------|
-| `pytest`（Code/） | 49 passed |
-| `python3 scripts/rq1_runner.py --print-meta / --dry-run` | 通过；实例 `pallets__flask-4045` 可用 |
-| 本地 Parquet | `../SWE-bench_Lite/data/test-00000-of-00001.parquet` |
-| Flask 仓库 @ base_commit | `Code/.rq1_repos/flask`（已本地准备；`.gitignore` 忽略） |
-| 需 `OPENAI_API_KEY` 的完整 run | 未在 CI/无 key 环境执行；设置 key 后运行下方命令 |
+## What gets written
 
-## 生成一条完整 JSON
+- **JSON** — one file per run, named from `instance_id` (characters such as `/` are normalized in the filename). Each file lists conditions run (e.g. ConcordCoder vs. baseline), timing, `fairness_budget`, `cost` fields, and model outputs as documented in the script and schema.
+- **Plots / CSV** (optional) — produced by `scripts/rq1_analyze.py` into a subfolder you choose (e.g. `results/rq1/plots/`).
+
+## One-command sample (illustrative instance)
+
+The helper script [scripts/run_rq1_sample.sh](../scripts/run_rq1_sample.sh) runs a **single** SWE-bench Lite instance (`pallets__flask-4045`) with two conditions, after you have:
+
+1. Cloned the target repo and checked out the `base_commit` for that instance (use `python3 scripts/rq1_runner.py --print-meta --instance-id pallets__flask-4045` for the exact commands).
+2. Set `CONCORD_SWE_REPO_ROOT` to that clone (default in the script: `<repo root>/.rq1_repos/flask` if you follow the meta instructions).
+3. Set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY` (and `OPENAI_BASE_URL` if using a compatible gateway).
 
 ```bash
-cd /path/to/ConcordCoder/Code
-export CONCORD_SWE_REPO_ROOT=/path/to/ConcordCoder/Code/.rq1_repos/flask
-export OPENAI_API_KEY=...   # 或 ANTHROPIC_API_KEY；DeepSeek: 设 OPENAI_BASE_URL=https://api.deepseek.com
+cd /path/to/this/repository
+export CONCORD_SWE_REPO_ROOT="$PWD/.rq1_repos/flask"
+export OPENAI_API_KEY=...
 ./scripts/run_rq1_sample.sh
 ```
 
-产出文件：`pallets__flask-4045.json`（instance id 中 `/` 会替换为 `_`）。
-
-## 分析 / 出图
-
-在已有至少一个 `*.json` 结果后：
+## Post-processing
 
 ```bash
 python3 scripts/rq1_analyze.py --results-dir results/rq1 --out-dir results/rq1/plots
 ```
+
+Requires at least one valid `*.json` from the runner. If no JSON is present, the analyzer exits with a clear message (see script help).
+
+## Reference instance
+
+`pallets__flask-4045` is used in documentation as a **smoke** example only; the full benchmark and scaling process are described in [docs/EVALUATION.md](../docs/EVALUATION.md).

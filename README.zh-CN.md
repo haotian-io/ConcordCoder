@@ -44,6 +44,7 @@ pip install -e ".[dev,all]"
 ## 文档
 
 - **[评测与复现](docs/EVALUATION.md)**：SWE-bench Lite 驱动、`mini_eval`、探针 / logprobs 表等（**均在仓库内**，无父目录依赖）。  
+- **[复现状态与结果布局](RESULTS.md)**：单元测试、RQ1 输出目录说明，供复现与审稿对照（英文撰写，与 EVALUATION 互补）。  
 - 首次检查 API 配置：运行 **`concord doctor`**（只初始化客户端，不发起聊天请求）。
 
 ## 环境变量

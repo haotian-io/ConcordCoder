@@ -2,7 +2,7 @@
 
 ## Day 1: Story narrowing and claim boundary
 
-- **Inputs**: `Plan - Haotian.md`, `docs/WEEK1_V0_PROPOSAL.md`.
+- **Inputs**: `docs/WEEK1_V0_PROPOSAL.md` (scope and claim boundary; any private research notes stay out of this repository).
 - **Actions**:
   - Freeze single-task scope and B-track claim boundary.
   - Align terminology across proposal and README.

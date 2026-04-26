@@ -6,7 +6,7 @@
 - Package installed in editable mode:
 
 ```bash
-cd /home/liuhaotian/Jap/ConcordCoder/Code
+cd /path/to/ConcordCoder
 pip install -e ".[dev,all]"
 ```
 

@@ -44,6 +44,7 @@ pip install -e ".[dev,all]"
 ## ドキュメント
 
 - **[評価とベンチマーク](docs/EVALUATION.md)** — SWE-bench Lite ドライバ、`mini_eval`、probing / logprobs 表など（**本リポジトリ内**のパスのみ）。  
+- **[再現性と評価ステータス](RESULTS.md)** — テストの前提、RQ1 成果物の置き場所、査読者向けの要約（英語。EVALUATION.md と併用）。  
 - 初回は **`concord doctor`** で API キーとクライアント初期化を確認（チャットは送りません）。
 
 ## 環境変数
