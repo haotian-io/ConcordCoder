@@ -203,8 +203,8 @@ def run_single_task(
             online_runtime_sec=online_align_sec + online_gen_sec,
             online_turns=max(0, len(alignment.turn_log)),
             offline_extract_sec=offline_extract_sec,
-            offline_git_sec=0.0,
-            offline_analysis_sec=0.0,
+            offline_git_sec=builder.timings.get("git_sec", 0.0),
+            offline_analysis_sec=builder.timings.get("ast_sec", 0.0) + builder.timings.get("test_sec", 0.0),
             total_runtime_sec=time.perf_counter() - t_start,
         ),
     )

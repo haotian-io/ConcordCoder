@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+import time
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -51,6 +52,13 @@ class BundleBuilder:
         self.target_file = target_file.replace("\\", "/") if target_file else None
         self.target_symbol = target_symbol
         self.fast = fast
+        # Populated by build() for cost accounting
+        self.timings: dict[str, float] = {
+            "keyword_sec": 0.0,
+            "ast_sec": 0.0,
+            "git_sec": 0.0,
+            "test_sec": 0.0,
+        }
 
     # ------------------------------------------------------------------
     # Public API
@@ -62,9 +70,12 @@ class BundleBuilder:
             tokens = set(tokens) | symbol_tokens(self.target_symbol)
 
         # ---- Layer 0: keyword snippet retrieval ----
+        _t0 = time.perf_counter()
         snippets = self._keyword_snippets(tokens)
+        self.timings["keyword_sec"] = time.perf_counter() - _t0
 
         # ---- Layer 1: AST + call graph ----
+        _t0 = time.perf_counter()
         analyzer = ASTAnalyzer()
         eff_max = min(40, self.max_files) if self.fast else self.max_files
         analyses = analyzer.analyze_repo(self.repo_root, max_files=eff_max)
@@ -75,8 +86,10 @@ class BundleBuilder:
         entry_points = self._detect_entry_points(analyses)
         affected_modules = self._detect_affected_modules(analyses, cg_builder, tokens)
         design_constraints = self._constraints_from_ast(analyses, tokens)
+        self.timings["ast_sec"] = time.perf_counter() - _t0
 
         # ---- Layer 2: git history ----
+        _t0 = time.perf_counter()
         if self.fast:
             git_analysis = SimpleNamespace(
                 available=False,
@@ -87,6 +100,7 @@ class BundleBuilder:
         else:
             historian = GitHistorian(self.repo_root)
             git_analysis = historian.analyze(max_commits=80)
+        self.timings["git_sec"] = time.perf_counter() - _t0
         historical_decisions = []
         if git_analysis.available:
             historical_decisions = git_analysis.design_decisions
@@ -96,6 +110,7 @@ class BundleBuilder:
                 )
 
         # ---- Layer 3: test file analysis ----
+        _t0 = time.perf_counter()
         if self.fast:
             test_analysis = SimpleNamespace(
                 expectations=[],
@@ -105,6 +120,7 @@ class BundleBuilder:
         else:
             test_extractor = TestExtractor()
             test_analysis = test_extractor.analyze_repo(self.repo_root)
+        self.timings["test_sec"] = time.perf_counter() - _t0
         test_expectations = [
             f"[{e.test_file}::{e.test_name}] {e.description}"
             for e in test_analysis.expectations[:20]
