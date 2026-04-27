@@ -1,0 +1,60 @@
+{
+  "driver": "rq1_runner",
+  "split": "test",
+  "instance_id": "astropy__astropy-12907",
+  "models": [
+    "deepseek-v4-pro"
+  ],
+  "conditions": [
+    "baseline"
+  ],
+  "rows": [
+    {
+      "condition": "deepseek-v4-pro_baseline",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 0,
+      "unified_diff_len": 0,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 0,
+      "constraint_compliance": {},
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 118.58,
+      "alignment_turn_log_n": 0,
+      "cost": {
+        "online_runtime_sec": 118.5779,
+        "online_turns": 1,
+        "online_prompt_tokens": 470,
+        "online_completion_tokens": 4096,
+        "offline_extract_sec": 0.0,
+        "offline_git_sec": 0.0,
+        "offline_analysis_sec": 0.0,
+        "total_runtime_sec": 118.5779
+      },
+      "model": "deepseek-v4-pro",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    }
+  ],
+  "fairness_budget": {
+    "max_turns": 3,
+    "max_prompt_tokens": 4000,
+    "max_completion_tokens": 4000,
+    "max_wallclock_sec": 300
+  },
+  "enhanced_metrics_enabled": false
+}

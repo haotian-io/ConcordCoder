@@ -1,0 +1,73 @@
+============================================================
+RQ1 Full Experiment - 6 Models
+============================================================
+Instance: astropy__astropy-12907
+Repo: /home/liuhaotian/Jap/ConcordCoder/astropy
+Models: ['qwen3.5-plus', 'glm-5.1', 'gemini-3.1-pro-preview', 'MiniMax-M2.7', 'kimi-k2.6', 'deepseek-v4-pro']
+
+
+============================================================
+[qwen3.5-plus] Starting tests...
+============================================================
+[qwen3.5-plus] Running concordcoder...
+  ✅ concordcoder: ✅  elapsed=98.98s  warnings=0  unified_diff_len=2013
+[qwen3.5-plus] Running baseline...
+  ✅ baseline: ✅  elapsed=18.45s  warnings=0  unified_diff_len=1547
+
+============================================================
+[glm-5.1] Starting tests...
+============================================================
+[glm-5.1] Running concordcoder...
+  ✅ concordcoder: ✅  elapsed=417.15s  warnings=0  unified_diff_len=483
+[glm-5.1] Running baseline...
+  ✅ baseline: ✅  elapsed=282.45s  warnings=0  unified_diff_len=17717
+
+============================================================
+[gemini-3.1-pro-preview] Starting tests...
+============================================================
+[gemini-3.1-pro-preview] Running concordcoder...
+  ✅ concordcoder: ✅  elapsed=112.07s  warnings=0  unified_diff_len=102
+[gemini-3.1-pro-preview] Running baseline...
+  ✅ baseline: ✅  elapsed=33.37s  warnings=0  unified_diff_len=442
+
+============================================================
+[MiniMax-M2.7] Starting tests...
+============================================================
+[MiniMax-M2.7] Running concordcoder...
+  ✅ concordcoder: ✅  elapsed=33.9s  warnings=0  unified_diff_len=0
+[MiniMax-M2.7] Running baseline...
+  ✅ baseline: ✅  elapsed=14.36s  warnings=0  unified_diff_len=15068
+
+============================================================
+[kimi-k2.6] Starting tests...
+============================================================
+[kimi-k2.6] Running concordcoder...
+  ✅ concordcoder: ✅  elapsed=85.53s  warnings=0  unified_diff_len=29
+[kimi-k2.6] Running baseline...
+  ✅ baseline: ✅  elapsed=41.84s  warnings=0  unified_diff_len=16923
+
+============================================================
+[deepseek-v4-pro] Starting tests...
+============================================================
+[deepseek-v4-pro] Running concordcoder...
+  ✅ concordcoder: ✅  elapsed=197.89s  warnings=0  unified_diff_len=0
+[deepseek-v4-pro] Running baseline...
+  ✅ baseline: ✅  elapsed=118.58s  warnings=0  unified_diff_len=0
+
+============================================================
+Results Summary (Total: 1482.6s)
+============================================================
+  qwen3.5-plus              | concordcoder    | success | 
+  qwen3.5-plus              | baseline        | success | 
+  glm-5.1                   | concordcoder    | success | 
+  glm-5.1                   | baseline        | success | 
+  gemini-3.1-pro-preview    | concordcoder    | success | 
+  gemini-3.1-pro-preview    | baseline        | success | 
+  MiniMax-M2.7              | concordcoder    | success | 
+  MiniMax-M2.7              | baseline        | success | 
+  kimi-k2.6                 | concordcoder    | success | 
+  kimi-k2.6                 | baseline        | success | 
+  deepseek-v4-pro           | concordcoder    | success | 
+  deepseek-v4-pro           | baseline        | success | 
+
+Summary saved: results/rq1_full/summary.json

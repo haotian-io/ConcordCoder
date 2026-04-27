@@ -1,0 +1,74 @@
+{
+  "instance_id": "astropy__astropy-12907",
+  "models": [
+    "qwen3.5-plus",
+    "glm-5.1",
+    "gemini-3.1-pro-preview",
+    "MiniMax-M2.7",
+    "kimi-k2.6",
+    "deepseek-v4-pro"
+  ],
+  "total_time_s": 1482.63,
+  "results": [
+    {
+      "model": "qwen3.5-plus",
+      "condition": "concordcoder",
+      "status": "success"
+    },
+    {
+      "model": "qwen3.5-plus",
+      "condition": "baseline",
+      "status": "success"
+    },
+    {
+      "model": "glm-5.1",
+      "condition": "concordcoder",
+      "status": "success"
+    },
+    {
+      "model": "glm-5.1",
+      "condition": "baseline",
+      "status": "success"
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "condition": "concordcoder",
+      "status": "success"
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "condition": "baseline",
+      "status": "success"
+    },
+    {
+      "model": "MiniMax-M2.7",
+      "condition": "concordcoder",
+      "status": "success"
+    },
+    {
+      "model": "MiniMax-M2.7",
+      "condition": "baseline",
+      "status": "success"
+    },
+    {
+      "model": "kimi-k2.6",
+      "condition": "concordcoder",
+      "status": "success"
+    },
+    {
+      "model": "kimi-k2.6",
+      "condition": "baseline",
+      "status": "success"
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "condition": "concordcoder",
+      "status": "success"
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "condition": "baseline",
+      "status": "success"
+    }
+  ]
+}

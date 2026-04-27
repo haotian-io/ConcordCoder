@@ -82,6 +82,9 @@ SUPPORTED_MODELS = [
     "deepseek-v4-flash",
     "deepseek-v4-pro",
     "glm-5.1",
+    "qwen3.5-plus",
+    "MiniMax-M2.7",
+    "kimi-k2.6",
 ]
 
 # ── 数据加载 ─────────────────────────────────────────────────────────────────
@@ -167,6 +170,30 @@ def _file_hit_rate(pred: list[str], gold: list[str]) -> float:
 
 
 # ── Patch 解析 ───────────────────────────────────────────────────────────────
+
+def _robust_diff_parse(text: str) -> str:
+    """Robustly parse diff output from various models.
+    
+    Handles:
+    - Standard unified diff
+    - Markdown-wrapped diff (```diff ... ```)
+    - Simplified diff without headers
+    """
+    if not text:
+        return ""
+    
+    # Strip markdown code fences
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        lines = cleaned.splitlines()
+        # Remove ```diff or ``` at start, ``` at end
+        if len(lines) > 2:
+            cleaned = "\n".join(lines[1:-1])
+        else:
+            cleaned = cleaned.replace("```", "").strip()
+    
+    return cleaned
+
 
 def _first_path_from_patch(patch: str) -> str | None:
     if not patch:
@@ -259,6 +286,18 @@ def _get_llm_for_model(model_name: str):
     elif model_name == "glm-5.1":
         base_url = os.environ.get("ZHIPU_BASE_URL", base_url)
         api_key = os.environ.get("ZHIPU_API_KEY", api_key)
+    elif model_name == "qwen3.5-plus":
+        # Qwen uses OpenAI-compatible API
+        api_key = os.environ.get("QWEN_API_KEY", api_key)
+        base_url = os.environ.get("QWEN_BASE_URL", base_url)
+    elif model_name == "MiniMax-M2.7":
+        # MiniMax uses OpenAI-compatible API
+        api_key = os.environ.get("MINIMAX_API_KEY", api_key)
+        base_url = os.environ.get("MINIMAX_BASE_URL", base_url)
+    elif model_name == "kimi-k2.6":
+        # Kimi (Moonshot) uses OpenAI-compatible API
+        api_key = os.environ.get("KIMI_API_KEY", api_key)
+        base_url = os.environ.get("KIMI_BASE_URL", base_url)
     elif model_name != "gpt-5.5":
         raise ValueError(f"Unsupported model: {model_name}. Supported: {SUPPORTED_MODELS}")
 
@@ -343,7 +382,9 @@ def run_baseline(inst: dict, repo_root: Path, llm) -> dict:
     target_file = _first_path_from_patch(inst.get("patch") or "")
     result = run_direct_baseline(task=task, client=llm, repo_hint=str(repo_root))
     reply = result["reply"]
-    pred_paths = paths_from_unified_diff(reply)
+    # Use robust diff parsing to handle markdown-wrapped output
+    cleaned_reply = _robust_diff_parse(reply)
+    pred_paths = paths_from_unified_diff(cleaned_reply)
     elapsed = float(result["elapsed_s"])
 
     target_files_gold = _all_paths_from_patch(inst.get("patch") or "")
@@ -406,7 +447,9 @@ def run_baseline_posthoc(inst: dict, repo_root: Path, llm) -> dict:
     reply = result["reply"]
     elapsed = float(result["elapsed_s"])
     target_files_gold = _all_paths_from_patch(inst.get("patch") or "")
-    pred_paths = paths_from_unified_diff(reply)
+    # Use robust diff parsing to handle markdown-wrapped output
+    cleaned_reply = _robust_diff_parse(reply)
+    pred_paths = paths_from_unified_diff(cleaned_reply)
     file_hit_rate = _file_hit_rate(pred_paths, target_files_gold)
     return {
         "condition": "baseline_posthoc",
@@ -458,7 +501,7 @@ def main() -> None:
                    help="运行条件，逗号分隔: concordcoder,baseline,baseline_posthoc")
     p.add_argument("--split", default=_DEFAULT_SPLIT, help="数据集 split（默认: test）")
     p.add_argument("--models", default="gpt-5.5",
-                   help="模型列表，逗号分隔 (gpt-5.5,deepseek-v4-flash,deepseek-v4-pro,gemini-3.1-pro-preview,glm-5.1)")
+                   help="模型列表，逗号分隔 (gpt-5.5,qwen3.5-plus,deepseek-v4-flash,deepseek-v4-pro,gemini-3.1-pro-preview,glm-5.1,MiniMax-M2.7,kimi-k2.6)")
     p.add_argument("--enhanced-metrics", action="store_true",
                    help="计算增强评估指标（Edit Distance, AST Similarity, CodeBLEU等）")
     args = p.parse_args()
