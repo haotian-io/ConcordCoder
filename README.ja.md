@@ -4,136 +4,195 @@
 
 > **認知整列（コグニティブ・アライメント）を補助するコード生成** — 既存システムについてユーザーとモデルの**共通理解**を先に整えたうえで、実装を協調生成する。
 
-## リポジトリの位置づけ
+## リポジトリ構成
 
-本リポジトリがそのままインストール可能な Python パッケージです。クローン後は **`pyproject.toml` があるリポジトリ根**で `pip install -e .` を実行してください。
+本ディレクトリは**インストール可能な Python パッケージ**です。クローン後、`pyproject.toml` があるルートディレクトリで `pip install -e .` を実行してください。
 
-本リポジトリ外の論文チェックアウト等は実行時には不要です。
+**関連アセット（親ディレクトリ）：**
+- `Paper/` — LaTeX 論文ソースとコンパイル済み PDF
+- `SWE-bench_Lite/` — ベンチマークデータセット
+- `USAGE.md` — 総合使用ガイド
+- `experiments/` — 実験リポジトリと結果
 
-## 全体パイプライン
+## コアパイプライン
 
 ```
 ユーザータスク
    ↓
 [Phase 1] 文脈抽出
-  AST + 呼び出しグラフ + Git 履歴 + テストからの手がかり → ContextBundle
+  AST + 呼び出しグラフ + Git 履歴 + テスト手がかり → ContextBundle
    ↓
-[Phase 2] アライメント対話
-  人–AI の多層やりとり（文脈再構築 → 制約確認 → 共同設計）→ AlignmentRecord
+[Phase 2] 認知整列対話
+  人–AI 多層やりとり（文脈再構築 → 制約確認 → 共同設計）→ AlignmentRecord
    ↓
 [Phase 3] 制約付き生成
-  軽い検証付き LLM 生成 + 短い認知要約
+  検証付き LLM コード生成 + 認知要約
 ```
 
-## セットアップ
+## クイックスタート
+
+### 1. インストール
 
 ```bash
-cd /path/to/ConcordCoder
+cd /path/to/ConcordCoder/Code
 pip install -e ".[dev]"
 
-# LLM（必要に応じて一方）
-pip install -e ".[openai]"
-pip install -e ".[anthropic]"
+# 任意：LLM バックエンド
+pip install -e ".[openai]"     # OpenAI (GPT-4o, GPT-5 など)
+pip install -e ".[anthropic]"  # Anthropic Claude
 
-# Git 履歴分析
-pip install -e ".[git]"
-
+# 全オプション依存関係
 pip install -e ".[dev,all]"
 ```
 
-## ドキュメント
-
-- **[評価とベンチマーク](docs/EVALUATION.md)** — SWE-bench Lite ドライバ、`mini_eval`、probing / logprobs 表など（**本リポジトリ内**のパスのみ）。  
-- **[再現性と評価ステータス](RESULTS.md)** — テストの前提、RQ1 成果物の置き場所、査読者向けの要約（英語。EVALUATION.md と併用）。  
-- 初回は **`concord doctor`** で API キーとクライアント初期化を確認（チャットは送りません）。
-
-## 環境変数
-
-**`concord run` / `once` / `align` および `scripts/mini_eval.py` は LLM 必須**です。`OPENAI_API_KEY` または `ANTHROPIC_API_KEY` を設定してください。未設定の場合は**エラー終了**します（生成スタブはありません）。
-
-**OpenAI 互換 API** では次のようにエンドポイントを指定します（提供元の手順に合わせて `/v1` の要否を調整）:
+### 2. API キーの設定
 
 ```bash
-export OPENAI_API_KEY=sk-...
-export OPENAI_BASE_URL=https://example.com/v1
-# export ANTHROPIC_API_KEY=sk-ant-...
+# OpenAI または互換エンドポイント
+export OPENAI_API_KEY='your-api-key'
+export OPENAI_BASE_URL='https://api.openai.com/v1'  # プロキシ使用時
+export CONCORD_OPENAI_MODEL='gpt-4o'  # または 'gpt-5' など
+
+# Anthropic
+export ANTHROPIC_API_KEY='your-api-key'
 ```
 
-## 使い方
-
-### `concord once`（単一タスク・スクリプト / CI 向け）
-
-デフォルトで **LLM 一括認知アライメント**（`LLMAlignmentDialogue.run_batch`、論文 Phase 2 と整合）を実行します。回帰・コスト削減・CI 速検のみ **`--no-full-align`**（抽出＋ルール整列の簡易パス）を付けます。
+### 3. 設定確認
 
 ```bash
-pip install -e ".[dev,openai]"
+concord doctor --backend openai
+# 出力：LLM クライアント初期化完了（ネットワーク呼び出しなし）
+```
 
-concord once /path/to/target/repo \
-  -t "要件の説明" \
-  -o /tmp/concord_out \
+### 4. 最初のタスク実行
+
+```bash
+concord once /path/to/your/repo \
+  -t "支払い処理関数に指数バックオフ再試行を追加" \
+  -o /tmp/concord_output \
   --format markdown_plan
+```
 
-# 機械可読 JSON → `files/` に展開
+## コアコマンド
+
+### `concord once` — 単一タスク（スクリプト/CI 向け推奨）
+
+完全パイプラインを実行し構造化出力を書き込みます。
+
+```bash
+# Markdown プラン出力
+concord once /path/to/repo -t "タスク説明" -o /tmp/out --format markdown_plan
+
+# JSON 出力（機械可読）
 concord once /path/to/repo -t "..." -o /tmp/out --format json
 
-# unified diff のみ → `diff.patch`
+# unified diff のみ
 concord once /path/to/repo -t "..." -o /tmp/out --format diff
 
-# 高速: 走査範囲を絞り、Git / テスト走査を省略
+# 高速モード（Git 履歴とテスト分析をスキップ）
 concord once /path/to/repo -t "..." -o /tmp/out --fast
-```
 
-**InlineCoder 風アンカー**（任意）：`--target-file` とシンボルで絞り込み、ドラフト
-アンカーと前後文脈の組立を有効化（`--use-anchor`）。
-
-```bash
-concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file src/my_module.py \
-  --symbol my_function \
+# アンカーモード（InlineCoder 風、特定関数向け）
+concord once /path/to/repo -t "..." -o /tmp/out \
+  --target-file src/module.py \
+  --symbol function_name \
   --use-anchor
 
-# 任意：アンカー草稿に Probing（API に logprobs が無い場合は mock。--use-anchor が必須）
-concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file src/my_module.py \
-  --symbol my_function \
+# 任意：アンカードラフトでプロビングサマリーを実行（--use-anchor 必須）
+concord once /path/to/repo -t "..." -o /tmp/out \
+  --target-file src/module.py \
+  --symbol function_name \
   --use-anchor --with-probe
+
+# OpenAI でリアル chat logprobs を使用（失敗時は mock にフォールバック）
+# export CONCORD_REAL_LOGPROBS=1
 ```
 
-**ミニ評価 `mini_eval.py`（artifact / 回帰）**：ユーザーが用意した**実リポジトリ**と**タスク YAML 群**に対し 3 バリエーションを実行し、JSON を標準出力へ。サンプルリポジトリは同梱しません。手順は [`examples/mini_eval/README.ja.md`](examples/mini_eval/README.ja.md)（[en](examples/mini_eval/README.md) / [zh](examples/mini_eval/README.zh-CN.md)）。
+### `concord extract` — Phase 1 のみ（LLM 不要）
+
+コード生成せずに文脈を抽出します。
 
 ```bash
-cd /path/to/ConcordCoder
-export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
-export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
-python3 scripts/mini_eval.py
-```
-
-`--format` 例：`markdown_plan` | `md` | `json` / `json_files` | `diff` / `unified_diff`。
-
-### Phase 1: `extract`
-
-```bash
-concord extract /path/to/repo --task "支払い経路に指数バックオフ再試行を追加"
+concord extract /path/to/repo --task "ユーザークエリにキャッシュを追加"
 concord extract /path/to/repo --task "..." --json context.json
 ```
 
-### 全行程: `run`
+### `concord run` — 完全パイプライン
 
 ```bash
+# 非対話モード（一括整列）
 concord run /path/to/repo --task "..."
+
+# 対話モード
 concord run /path/to/repo --task "..." --interactive
+
+# バックエンド指定
 concord run /path/to/repo --task "..." --backend openai
 ```
 
-### アライメントのみ: `align`
+### `concord align` — Phase 2 のみ
+
+整列対話を実行します（デバッグ用）。
 
 ```bash
 concord align /path/to/repo --task "..."
 ```
 
+## 環境変数
+
+| 変数 | 説明 | 必須 |
+|------|------|------|
+| `OPENAI_API_KEY` | OpenAI API キー | OpenAI バックエンド用 |
+| `ANTHROPIC_API_KEY` | Anthropic API キー | Claude バックエンド用 |
+| `OPENAI_BASE_URL` | API エンドポイント（プロキシ用） | 任意 |
+| `CONCORD_OPENAI_MODEL` | モデル名（例：`gpt-4o`） | デフォルト：`gpt-4o` |
+| `CONCORD_REAL_LOGPROBS` | リアル logprobs を使用 (1=yes) | 任意 |
+
+## 評価とベンチマーク
+
+**[docs/EVALUATION.md](docs/EVALUATION.md)** を参照：
+- SWE-bench Lite ドライバー（`scripts/swe_bench_batch.py`）
+- Mini 評価（`scripts/mini_eval.py`）
+- プロビング/logprobs ハイパーパラメータ
+- 再現性ガイド
+
+### Mini 評価
+
+カスタムリポジトリとタスク YAML で回帰テストを実行：
+
+```bash
+cd /path/to/ConcordCoder  # pyproject.toml があるルート
+export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
+export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
+python3 scripts/mini_eval.py
+```
+
+詳細は [`examples/mini_eval/README.ja.md`](examples/mini_eval/README.ja.md) を参照。
+
 ## コード構成
 
-`src/concordcoder/` 以下のモジュール構成は [README.md](README.md) のツリーと同じです。
+```
+src/concordcoder/
+├── cli.py              # Typer CLI エントリポイント
+├── pipeline.py         # メインオーケストレーション
+├── schemas.py          # Pydantic データ構造
+├── llm_client.py       # LLM API クライアント
+├── extraction/         # Phase 1 モジュール
+│   ├── bundle_builder.py
+│   ├── ast_analyzer.py
+│   ├── call_graph.py
+│   ├── git_historian.py
+│   └── test_extractor.py
+├── alignment/          # Phase 2 モジュール
+│   ├── dialogue.py
+│   ├── llm_dialogue.py
+│   └── prompts.py
+└── generation/         # Phase 3 モジュール
+    ├── constrained_gen.py
+    ├── anchor_pipeline.py
+    ├── probing.py
+    └── stub.py
+```
 
 ## テスト
 
@@ -141,10 +200,21 @@ concord align /path/to/repo --task "..."
 pytest -v
 ```
 
-## 研究（要約）
+全テストは `StubLLM` を使用（ネットワーク不要）。
 
-RQ1–RQ3 の定義、ユーザスタディ、主張の全体は**付随する論文**を参照してください。自動評価トラックの再現用ドライバは [docs/EVALUATION.md](docs/EVALUATION.md) にまとめています。
+## 研究課題
 
----
+完全な定義、ユーザー調査計画、主張は**付随する論文**を参照：
+- **RQ1：** コード生成品質（SWE-bench Lite 自動評価）
+- **RQ2：** ユーザーの理解と信頼（計画中のユーザー調査）
+- **RQ3：** 整列対話のコスト効果（計画中）
 
-英語版 [README.md](README.md) / 中国語 [README.zh-CN.md](README.zh-CN.md) も併せて参照してください。
+## ドキュメント索引
+
+| ドキュメント | 説明 |
+|-------------|------|
+| **[docs/EVALUATION.md](docs/EVALUATION.md)** | 評価プロトコルと再現性 |
+| **[docs/MINI_EVAL_RUNBOOK.md](docs/MINI_EVAL_RUNBOOK.md)** | Mini 評価ガイド |
+| **../USAGE.md** | 総合使用ガイド（多言語） |
+| **../Paper/** | LaTeX 論文ソースと PDF |
+| **../experiments/results/** | RQ1 実験結果 |

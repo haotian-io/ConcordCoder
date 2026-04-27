@@ -4,12 +4,12 @@ This module implements Contribution 2 of ConcordCoder:
   - Estimates LLM generation confidence at AST node level via token logprobs
   - Weights low-confidence nodes by multi-factor structural risk
   - Generates targeted probe questions for uncertain + high-risk code regions
-  - Triggers selective re-generation only for flagged spans (not full restart)
+  - Produces targeted probe metadata that can guide a bounded follow-up regeneration
 
 Comparison with InlineCoder (arXiv:2601.00376):
   - InlineCoder:  perplexity → automatic upstream/downstream retrieval (no human)
   - ConcordCoder: perplexity + structural hotspot score → probe question
-                  → targeted re-generation of the uncertain span
+                  → constraint-driven follow-up generation / user verification
 
 API:
     from concordcoder.generation.probing import ProbingEngine

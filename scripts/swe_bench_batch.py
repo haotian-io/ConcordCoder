@@ -268,7 +268,7 @@ def main() -> None:
             task=task,
             no_align=bool(args.no_align),
             full_align=not bool(args.no_align),
-            output_format=OutputFormat.JSON,
+            output_format=OutputFormat.JSON_FILES,
             use_anchor=False,
             with_probe=False,
             target_file=target_file,

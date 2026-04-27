@@ -239,33 +239,19 @@ def run_concordcoder(inst: dict, repo_root: Path, llm) -> dict:
 
 
 def run_baseline(inst: dict, repo_root: Path, llm) -> dict:
-    """运行 Direct Baseline（无对齐，跳过 Phase 2）。"""
-    from concordcoder.pipeline import run_single_task
-    from concordcoder.schemas import OutputFormat, SingleTaskSpec
+    """运行真正的 Direct Baseline（无抽取、无对齐、无约束生成）。"""
+    from concordcoder.eval_baselines import run_direct_baseline
+    from concordcoder.generation.json_output import paths_from_unified_diff
 
     iid = inst["instance_id"]
     task = (inst.get("problem_statement") or "")[:20000]
     target_file = _first_path_from_patch(inst.get("patch") or "")
-
-    spec = SingleTaskSpec(
-        task_id=iid,
-        task=task,
-        no_align=True,
-        full_align=False,
-        output_format=OutputFormat.UNIFIED_DIFF,
-        use_anchor=False,
-        with_probe=False,
-        target_file=target_file,
-        target_symbol=None,
-        answers={},
-    )
-
-    t0 = time.time()
-    st = run_single_task(repo_root, spec, llm_client=llm, fast_extract=True)
-    elapsed = time.time() - t0
+    result = run_direct_baseline(task=task, client=llm, repo_hint=str(repo_root))
+    reply = result["reply"]
+    pred_paths = paths_from_unified_diff(reply)
+    elapsed = float(result["elapsed_s"])
 
     target_files_gold = _all_paths_from_patch(inst.get("patch") or "")
-    pred_paths = _predicted_paths_from_task(st)
     file_hit_rate = _file_hit_rate(pred_paths, target_files_gold)
 
     return {
@@ -278,49 +264,54 @@ def run_baseline(inst: dict, repo_root: Path, llm) -> dict:
         "predicted_files": pred_paths,
         "file_hit_rate": file_hit_rate,
         "n_predicted_paths": len(pred_paths),
-        "code_plan_len": len(st.generation.code_plan or ""),
-        "unified_diff_len": len(st.generation.unified_diff_text or ""),
-        "warnings_n": len(st.generation.warnings),
-        "warnings": st.generation.warnings,
+        "code_plan_len": len(reply or ""),
+        "unified_diff_len": len(reply or ""),
+        "warnings_n": 0,
+        "warnings": [],
         "n_constraints": 0,
         "constraint_compliance": {},
-        "n_parsed_files": len(st.parsed_files),
+        "n_parsed_files": 0,
         "probe": {},
         "elapsed_s": round(elapsed, 2),
-        "alignment_turn_log_n": len(st.alignment_turn_log),
-        "cost": st.cost.model_dump(mode="json"),
+        "alignment_turn_log_n": 0,
+        "cost": {
+            "online_runtime_sec": round(elapsed, 4),
+            "online_turns": result["rounds_used"],
+            "online_prompt_tokens": result["prompt_tokens"],
+            "online_completion_tokens": result["completion_tokens"],
+            "offline_extract_sec": 0.0,
+            "offline_git_sec": 0.0,
+            "offline_analysis_sec": 0.0,
+            "total_runtime_sec": round(elapsed, 4),
+        },
     }
 
 
 def run_baseline_posthoc(inst: dict, repo_root: Path, llm) -> dict:
     """Post-hoc style baseline with bounded corrective hints."""
-    from concordcoder.pipeline import run_single_task
-    from concordcoder.schemas import OutputFormat, SingleTaskSpec
+    from concordcoder.eval_baselines import run_direct_baseline
+    from concordcoder.generation.json_output import paths_from_unified_diff
 
     iid = inst["instance_id"]
     task = (inst.get("problem_statement") or "")[:20000]
     target_file = _first_path_from_patch(inst.get("patch") or "")
-    posthoc_hint = (
-        "Post-hoc feedback budget: if uncertain, preserve public API and avoid "
-        "breaking tests; prefer minimal patch."
-    )
-    spec = SingleTaskSpec(
-        task_id=iid,
+    max_turns = max(1, int(os.environ.get("CONCORD_FAIR_MAX_TURNS", "3")))
+    feedback_rounds = [
+        "Revise the patch to be more conservative: preserve public API signatures, "
+        "touch as few files as possible, and avoid speculative refactors.",
+        "Revise again with a stricter focus on minimal diff size and repository compatibility. "
+        "Keep only changes that are necessary for the requested task.",
+    ][: max(0, max_turns - 1)]
+    result = run_direct_baseline(
         task=task,
-        no_align=True,
-        full_align=False,
-        output_format=OutputFormat.UNIFIED_DIFF,
-        use_anchor=False,
-        with_probe=False,
-        target_file=target_file,
-        target_symbol=None,
-        answers={"posthoc_feedback": posthoc_hint},
+        client=llm,
+        repo_hint=str(repo_root),
+        feedback_rounds=feedback_rounds,
     )
-    t0 = time.time()
-    st = run_single_task(repo_root, spec, llm_client=llm, fast_extract=False)
-    elapsed = time.time() - t0
+    reply = result["reply"]
+    elapsed = float(result["elapsed_s"])
     target_files_gold = _all_paths_from_patch(inst.get("patch") or "")
-    pred_paths = _predicted_paths_from_task(st)
+    pred_paths = paths_from_unified_diff(reply)
     file_hit_rate = _file_hit_rate(pred_paths, target_files_gold)
     return {
         "condition": "baseline_posthoc",
@@ -332,17 +323,26 @@ def run_baseline_posthoc(inst: dict, repo_root: Path, llm) -> dict:
         "predicted_files": pred_paths,
         "file_hit_rate": file_hit_rate,
         "n_predicted_paths": len(pred_paths),
-        "code_plan_len": len(st.generation.code_plan or ""),
-        "unified_diff_len": len(st.generation.unified_diff_text or ""),
-        "warnings_n": len(st.generation.warnings),
-        "warnings": st.generation.warnings,
+        "code_plan_len": len(reply or ""),
+        "unified_diff_len": len(reply or ""),
+        "warnings_n": 0,
+        "warnings": [],
         "n_constraints": 0,
         "constraint_compliance": {},
-        "n_parsed_files": len(st.parsed_files),
+        "n_parsed_files": 0,
         "probe": {},
         "elapsed_s": round(elapsed, 2),
-        "alignment_turn_log_n": len(st.alignment_turn_log),
-        "cost": st.cost.model_dump(mode="json"),
+        "alignment_turn_log_n": 0,
+        "cost": {
+            "online_runtime_sec": round(elapsed, 4),
+            "online_turns": result["rounds_used"],
+            "online_prompt_tokens": result["prompt_tokens"],
+            "online_completion_tokens": result["completion_tokens"],
+            "offline_extract_sec": 0.0,
+            "offline_git_sec": 0.0,
+            "offline_analysis_sec": 0.0,
+            "total_runtime_sec": round(elapsed, 4),
+        },
     }
 
 

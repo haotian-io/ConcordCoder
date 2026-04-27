@@ -6,9 +6,15 @@
 
 ## Repository layout
 
-This repository is the installable Python package. After cloning, work from the repository root (where `pyproject.toml` lives) and run `pip install -e .`.
+This repository is the **installable Python package**. After cloning, work from the repository root (where `pyproject.toml` lives) and run `pip install -e .`.
 
-Assets outside this repository (e.g. a separate paper checkout) are not required at runtime.
+**Asset relationship:**
+- This `Code/` directory is the standalone installable package.
+- Parent directory (`ConcordCoder/`) also contains:
+  - `Paper/` — LaTeX source and compiled PDF
+  - `SWE-bench_Lite/` — Benchmark dataset
+  - `USAGE.md` — Comprehensive usage guide
+  - `experiments/` — Experimental repos and results
 
 ## Core pipeline
 
@@ -22,177 +28,195 @@ User task
   Human–AI rounds (rebuild context → confirm constraints → co-design) → AlignmentRecord
    ↓
 [Phase 3] Constrained generation
-  Validated LLM code generation + short cognitive summary
+  Validated LLM code generation + cognitive summary
 ```
 
-## Setup
+## Quick start
 
-Use a virtual environment (venv or conda is fine):
+### 1. Installation
 
 ```bash
-cd /path/to/ConcordCoder
+cd /path/to/ConcordCoder/Code
 pip install -e ".[dev]"
 
-# Optional: LLM backend (one of)
-pip install -e ".[openai]"     # OpenAI (e.g. GPT-4o)
+# Optional: LLM backend
+pip install -e ".[openai]"     # OpenAI (GPT-4o, GPT-5, etc.)
 pip install -e ".[anthropic]"  # Anthropic Claude
 
-# Optional: Git history features
-pip install -e ".[git]"
-
-# All optional runtime deps
+# All optional dependencies
 pip install -e ".[dev,all]"
 ```
 
-## Documentation
-
-- **[Evaluation & benchmarks](docs/EVALUATION.md)** — SWE-bench Lite driver, `mini_eval`, probing / logprobs tables, and reproducibility pointers (all paths in-repo).
-- **[Reproducibility & evaluation status](RESULTS.md)** — test expectations, RQ1 artifact layout, and pointers for reviewers replicating the automated track.
-- **[Week1 v0 proposal](docs/WEEK1_V0_PROPOSAL.md)** — B-track scoped narrative and claim boundary.
-- **[Experiment protocol v1](docs/EXPERIMENT_PROTOCOL_V1.md)** — fairness controls, RQ metrics, and participant design.
-- **[Cost accounting template](docs/COST_ACCOUNTING_TEMPLATE.md)** — online/offline cost schema.
-- **[Week1 pilot report](docs/WEEK1_PILOT_V0_REPORT.md)** — executed checks and artifact pack.
-- **[Week1 day-by-day checklist](docs/WEEK1_DAY_BY_DAY_CHECKLIST.md)** — daily actions and acceptance criteria.
-- **[Mini eval runbook](docs/MINI_EVAL_RUNBOOK.md)** — real pilot commands and troubleshooting.
-- **[Pilot run log template](docs/templates/pilot_run_log.csv)** — per-run result capture table.
-- **[Security sweep report](docs/SECURITY_SWEEP_REPORT.md)** — secret scan findings and remediation status.
-- First-time API check: `concord doctor` (verifies keys / client init; no chat call).
-
-## Environment variables
-
-**`concord run` / `once` / `align` and `scripts/mini_eval.py` require an LLM**: set `OPENAI_API_KEY` or `ANTHROPIC_API_KEY`; the CLI exits with an error if neither is available (no stub generation).
-
-For **OpenAI-compatible proxies**, set the API base URL (adjust path per your provider, often ending in `/v1`):
+### 2. Configure API keys
 
 ```bash
-export OPENAI_API_KEY=sk-...
-export OPENAI_BASE_URL=https://example.com/v1
-# export ANTHROPIC_API_KEY=sk-ant-...
+# OpenAI or compatible endpoint
+export OPENAI_API_KEY='your-api-key'
+export OPENAI_BASE_URL='https://api.openai.com/v1'  # or your proxy
+export CONCORD_OPENAI_MODEL='gpt-4o'  # or 'gpt-5', etc.
+
+# Anthropic
+export ANTHROPIC_API_KEY='your-api-key'
 ```
 
-To use a **non-default model name** (e.g. a DeepSeek or other gateway model id), set `CONCORD_OPENAI_MODEL` or `OPENAI_MODEL` (see [`src/concordcoder/llm_client.py`](src/concordcoder/llm_client.py)).
-
-## Usage
-
-### `concord once` (single task, good for scripts / CI)
-
-By default, **batch LLM cognitive alignment** runs (`LLMAlignmentDialogue.run_batch`, consistent with paper Phase~2). Use **`--no-full-align`** only for fast regression, cost savings, or CI checks (extraction-side constraints + rule-based alignment).
+### 3. Verify setup
 
 ```bash
-pip install -e ".[dev,openai]"   # or anthropic
+concord doctor --backend openai
+# Output: LLM client initialized (no network call)
+```
 
-# Writes result.json; for markdown, also plan.md; for json_files, files/ and raw_model_output.txt
-concord once /path/to/target/repo \
-  -t "Describe the change" \
-  -o /tmp/concord_out \
+### 4. Run your first task
+
+```bash
+concord once /path/to/your/repo \
+  -t "Add exponential backoff retries to the payment processing function" \
+  -o /tmp/concord_output \
   --format markdown_plan
+```
 
-# Machine-readable JSON: {"files":[{"path","content"}]} → parsed under files/
+## Core commands
+
+### `concord once` — Single task (recommended for scripts/CI)
+
+Runs the full pipeline and writes structured output.
+
+```bash
+# Markdown plan output
+concord once /path/to/repo -t "Your task description" -o /tmp/out --format markdown_plan
+
+# JSON output (machine-readable)
 concord once /path/to/repo -t "..." -o /tmp/out --format json
 
-# Unified diff only → diff.patch
+# Unified diff only
 concord once /path/to/repo -t "..." -o /tmp/out --format diff
 
-# Fast context extraction (smaller scan, skip Git + test pass)
+# Fast mode (skip Git history and test analysis)
 concord once /path/to/repo -t "..." -o /tmp/out --fast
-```
 
-**InlineCoder-style anchor path** (optional): narrow to a file/symbol, build a
-draft anchor and upstream/downstream assembly (`--use-anchor`).
-
-```bash
-concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file src/my_module.py \
-  --symbol my_function \
+# Anchor path (InlineCoder-style, for targeted functions)
+concord once /path/to/repo -t "..." -o /tmp/out \
+  --target-file src/module.py \
+  --symbol function_name \
   --use-anchor
 
-# Optional: probing summary on the anchor draft (uses mock logprobs if the API
-# does not return logprobs; requires --use-anchor)
-concord once /path/to/repo -t "..." -o /tmp/out --format markdown_plan \
-  --target-file src/my_module.py \
-  --symbol my_function \
+# Optional: run probing summary on anchor draft (requires --use-anchor)
+concord once /path/to/repo -t "..." -o /tmp/out \
+  --target-file src/module.py \
+  --symbol function_name \
   --use-anchor --with-probe
+
+# Use real chat logprobs in OpenAI (falls back to mock on failure)
+# export CONCORD_REAL_LOGPROBS=1
 ```
 
-**Mini evaluation (`mini_eval.py`):** runs three variants on a **real repo you
-supply** plus **task YAMLs you supply**; prints one JSON object to stdout. No
-sample project is bundled; see [`examples/mini_eval/README.md`](examples/mini_eval/README.md) ([zh](examples/mini_eval/README.zh-CN.md) · [ja](examples/mini_eval/README.ja.md)).
+### `concord extract` — Phase 1 only (no LLM required)
+
+Extracts context without generating code.
 
 ```bash
-cd /path/to/ConcordCoder
-export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
-export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
-python3 scripts/mini_eval.py
-```
-
-`--format` accepts: `markdown_plan` | `md` | `json` / `json_files` | `diff` / `unified_diff`.
-
-### Phase 1: `extract` (context only)
-
-```bash
-concord extract /path/to/repo --task "Add exponential backoff retries to the payment path"
-
-# Dump ContextBundle to JSON
+concord extract /path/to/repo --task "Add caching to user queries"
 concord extract /path/to/repo --task "..." --json context.json
 ```
 
-### Full pipeline: `run` (Phase 1 → 2 → 3)
+### `concord run` — Full pipeline
 
 ```bash
-# Batch (non-interactive) alignment
-concord run /path/to/repo --task "Add exponential backoff retries to the payment path"
+# Non-interactive (batch alignment)
+concord run /path/to/repo --task "..."
 
-# Interactive alignment dialogue
+# Interactive dialogue
 concord run /path/to/repo --task "..." --interactive
 
-# LLM backend
+# Specify backend
 concord run /path/to/repo --task "..." --backend openai
-concord run /path/to/repo --task "..." --backend anthropic
 ```
 
-### `align` only (Phase 2, debugging)
+### `concord align` — Phase 2 only
+
+Only runs alignment dialogue (for debugging).
 
 ```bash
 concord align /path/to/repo --task "..."
 ```
 
-## Code layout
+## Environment variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OPENAI_API_KEY` | OpenAI API key | For OpenAI backend |
+| `ANTHROPIC_API_KEY` | Anthropic API key | For Claude backend |
+| `OPENAI_BASE_URL` | API endpoint (for proxies) | Optional |
+| `CONCORD_OPENAI_MODEL` | Model name (e.g. `gpt-4o`) | Default: `gpt-4o` |
+| `CONCORD_REAL_LOGPROBS` | Use real logprobs (1=yes) | Optional |
+
+## Evaluation & benchmarks
+
+See **[docs/EVALUATION.md](docs/EVALUATION.md)** for:
+- SWE-bench Lite driver (`scripts/swe_bench_batch.py`)
+- Mini evaluation (`scripts/mini_eval.py`)
+- Probing/logprobs hyperparameters
+- Reproducibility guide
+
+### Mini evaluation
+
+For custom repos and task YAMLs, run regression testing:
+
+```bash
+cd /path/to/ConcordCoder  # repository root with pyproject.toml
+export CONCORD_EVAL_REPO_ROOT=/abs/path/to/your/repo
+export CONCORD_EVAL_TASKS_DIR=/abs/path/to/your/task_yamls
+python3 scripts/mini_eval.py
+```
+
+See [`examples/mini_eval/README.md`](examples/mini_eval/README.md) for details.
+
+## Code structure
 
 ```
 src/concordcoder/
-├── schemas.py
-├── pipeline.py
-├── cli.py
-├── llm_client.py
-├── extraction/
+├── cli.py              # Typer CLI entry point
+├── pipeline.py         # Main orchestration
+├── schemas.py          # Pydantic data structures
+├── llm_client.py      # LLM API client
+├── extraction/         # Phase 1 modules
 │   ├── bundle_builder.py
 │   ├── ast_analyzer.py
 │   ├── call_graph.py
 │   ├── git_historian.py
 │   └── test_extractor.py
-├── alignment/
+├── alignment/          # Phase 2 modules
 │   ├── dialogue.py
 │   ├── llm_dialogue.py
 │   └── prompts.py
-└── generation/
-    ├── stub.py
-    ├── json_output.py
+└── generation/         # Phase 3 modules
+    ├── constrained_gen.py
     ├── anchor_pipeline.py
-    └── constrained_gen.py
+    ├── probing.py
+    └── stub.py
 ```
 
-## Tests
+## Testing
 
 ```bash
 pytest -v
 ```
 
-Covers, among other things: AST/call graph/test extraction, `BundleBuilder`, alignment stubs, `ConstrainedGenerator` stubs, end-to-end pipeline, JSON output parsing, and `concord once`–related helpers.
+All tests use `StubLLM` (no network required).
 
-## Research questions (summary)
+## Research questions
 
-Formal definitions, human-study protocol, and full claims appear in the **accompanying paper**. This repository ships **reproducible drivers** for the automated track; see [docs/EVALUATION.md](docs/EVALUATION.md).
+See the **accompanying paper** for full definitions:
+- **RQ1:** Code generation quality (automated evaluation on SWE-bench Lite)
+- **RQ2:** User understanding and trust (planned user study)
+- **RQ3:** Cost–benefit of alignment dialogue (planned)
 
-- **RQ1:** Code generation quality (e.g. SWE-bench–style repository tasks).
-- **RQ2:** Impact on user understanding (subjective and objective measures in the paper).
-- **RQ3:** Cost–benefit of alignment dialogue (turns vs. downstream effort).
+## Documentation index
+
+| Document | Description |
+|----------|-------------|
+| **[docs/EVALUATION.md](docs/EVALUATION.md)** | Evaluation protocols and reproducibility |
+| **[docs/MINI_EVAL_RUNBOOK.md](docs/MINI_EVAL_RUNBOOK.md)** | Mini evaluation guide |
+| **../USAGE.md** | Comprehensive usage guide (multi-language) |
+| **../Paper/** | LaTeX source and compiled PDF |
+| **../experiments/results/** | RQ1 experimental results |

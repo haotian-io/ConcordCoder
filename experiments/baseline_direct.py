@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-RQ1 **Direct** 基线：单轮、无 Phase1/2，仅把自然语言任务发给与 Concord 同后端的 LLM。
+"""RQ1 **Direct** 基线：单轮、无 Phase1/2，仅把自然语言任务发给与 Concord 同后端的 LLM。
 
 与主包解耦；用于与 ``run_single_task`` 在**同一** ``temperature`` / ``max_tokens`` / 模型上可比。
 
@@ -31,6 +30,8 @@ from pathlib import Path
 _CODE_ROOT = Path(__file__).resolve().parent.parent
 if str(_CODE_ROOT / "src") not in sys.path:
     sys.path.insert(0, str(_CODE_ROOT / "src"))
+
+from concordcoder.eval_baselines import run_direct_baseline
 
 
 def main() -> None:
@@ -69,16 +70,8 @@ def main() -> None:
     client.temperature = temp
     client.max_tokens = max_tok
 
-    user = (
-        "You are an expert software engineer. Implement the following in code form "
-        "when appropriate. Output a concise solution with code blocks as needed.\n\n"
-        f"Task: {task}\n"
-    )
-    if repo_hint:
-        user += f"\nRepository context (path only): {repo_hint}\n"
-
-    messages = [{"role": "user", "content": user}]
-    reply = client.chat(messages, system="")
+    result = run_direct_baseline(task=task, client=client, repo_hint=repo_hint)
+    reply = result["reply"]
 
     out = {
         "baseline": "direct",
@@ -87,6 +80,10 @@ def main() -> None:
         "temperature": client.temperature,
         "max_tokens": client.max_tokens,
         "reply_len": len(reply or ""),
+        "elapsed_s": round(float(result["elapsed_s"]), 2),
+        "rounds_used": result["rounds_used"],
+        "prompt_tokens": result["prompt_tokens"],
+        "completion_tokens": result["completion_tokens"],
         "fairness_budget": {
             "max_turns": int(os.environ.get("CONCORD_FAIR_MAX_TURNS", "3")),
             "max_prompt_tokens": int(os.environ.get("CONCORD_FAIR_MAX_PROMPT_TOKENS", "4000")),
