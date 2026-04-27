@@ -1,0 +1,28 @@
+============================================================
+RQ1 并发测试 - 5个模型同时测试
+============================================================
+Instance: astropy__astropy-12907
+Repo: /home/liuhaotian/Jap/ConcordCoder/astropy
+Models: ['gpt-5.5', 'deepseek-v4-flash', 'deepseek-v4-pro', 'gemini-3.1-pro-preview', 'glm-5.1']
+
+[gpt-5.5] 开始测试...
+[gemini-3.1-pro-preview] 开始测试...
+[glm-5.1] 开始测试...
+[deepseek-v4-flash] 开始测试...
+[deepseek-v4-pro] 开始测试...
+[gpt-5.5] 完成! FHR=1.00, elapsed=68.9s
+[gemini-3.1-pro-preview] 完成! FHR=0.00, elapsed=97.8s
+[deepseek-v4-flash] 完成! FHR=0.00, elapsed=118.6s
+[glm-5.1] 完成! FHR=1.00, elapsed=205.6s
+[deepseek-v4-pro] 完成! FHR=0.00, elapsed=310.3s
+
+============================================================
+测试结果汇总 (总耗时: 312.9s)
+============================================================
+  gpt-5.5                        | ✅ FHR=1.0 | elapsed=68.9s | diff=1623
+  gemini-3.1-pro-preview         | ✅ FHR=0.0 | elapsed=97.8s | diff=572
+  deepseek-v4-flash              | ✅ FHR=0.0 | elapsed=118.59s | diff=0
+  glm-5.1                        | ✅ FHR=1.0 | elapsed=205.65s | diff=628
+  deepseek-v4-pro                | ✅ FHR=0.0 | elapsed=310.29s | diff=0
+
+结果已保存: results/rq1_concurrent/astropy__astropy-12907_multi.json

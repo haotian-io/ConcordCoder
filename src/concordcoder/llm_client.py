@@ -41,10 +41,14 @@ class LLMClient:
         model: str | None = None,
         temperature: float = 0.2,
         max_tokens: int = 4096,
+        api_key: str | None = None,
+        base_url: str | None = None,
     ) -> None:
         self.backend = backend.lower()
         self.temperature = temperature
         self.max_tokens = max_tokens
+        self._api_key = api_key
+        self._base_url = base_url
 
         if self.backend == "openai":
             # OpenAI-compatible gateways (e.g. DeepSeek): set CONCORD_OPENAI_MODEL or OPENAI_MODEL
@@ -149,10 +153,10 @@ class LLMClient:
     def _init_openai(self):
         try:
             from openai import OpenAI  # type: ignore[import]
-            api_key = os.environ.get("OPENAI_API_KEY")
+            api_key = self._api_key or os.environ.get("OPENAI_API_KEY")
             if not api_key:
                 raise EnvironmentError("OPENAI_API_KEY not set.")
-            base_url = os.environ.get("OPENAI_BASE_URL")
+            base_url = self._base_url or os.environ.get("OPENAI_BASE_URL")
             if base_url:
                 return OpenAI(api_key=api_key, base_url=base_url)
             return OpenAI(api_key=api_key)

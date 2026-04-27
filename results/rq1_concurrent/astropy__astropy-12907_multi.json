@@ -1,0 +1,192 @@
+{
+  "instance_id": "astropy__astropy-12907",
+  "models": [
+    "gpt-5.5",
+    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    "gemini-3.1-pro-preview",
+    "glm-5.1"
+  ],
+  "total_time_s": 312.89,
+  "results": [
+    {
+      "model": "gpt-5.5",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [
+        "astropy/modeling/separable.py",
+        "astropy/modeling/tests/test_separable.py"
+      ],
+      "file_hit_rate": 1.0,
+      "unified_diff_len": 1623,
+      "warnings_n": 0,
+      "n_constraints": 12,
+      "constraint_compliance": {
+        "c1": true,
+        "c2": true,
+        "c3": true,
+        "c4": true,
+        "c5": true,
+        "c6": true,
+        "c7": true,
+        "s1": true,
+        "s2": true,
+        "s3": true,
+        "s4": true,
+        "s5": true
+      },
+      "elapsed_s": 68.9,
+      "alignment_turns": 1,
+      "cost": {
+        "online_runtime_sec": 42.871717950329185,
+        "online_turns": 1,
+        "online_prompt_tokens": 10644,
+        "online_completion_tokens": 3367,
+        "offline_extract_sec": 26.022920097224414,
+        "offline_git_sec": 0.034410069696605206,
+        "offline_analysis_sec": 24.80650280509144,
+        "total_runtime_sec": 68.89466764219105,
+        "human_minutes": null
+      }
+    },
+    {
+      "model": "gemini-3.1-pro-preview",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "unified_diff_len": 572,
+      "warnings_n": 0,
+      "n_constraints": 3,
+      "constraint_compliance": {
+        "docstring_test_kernel_normalization": true,
+        "docstring_transform_to": true,
+        "docstring_get_from_registry": true
+      },
+      "elapsed_s": 97.8,
+      "alignment_turns": 1,
+      "cost": {
+        "online_runtime_sec": 77.56115792971104,
+        "online_turns": 1,
+        "online_prompt_tokens": 10478,
+        "online_completion_tokens": 8184,
+        "offline_extract_sec": 20.240957213100046,
+        "offline_git_sec": 0.0004480951465666294,
+        "offline_analysis_sec": 19.37918554712087,
+        "total_runtime_sec": 97.80214645899832,
+        "human_minutes": null
+      }
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "unified_diff_len": 0,
+      "warnings_n": 0,
+      "n_constraints": 5,
+      "constraint_compliance": {
+        "c1": true,
+        "c2": true,
+        "c3": true,
+        "s1": true,
+        "s2": true
+      },
+      "elapsed_s": 118.59,
+      "alignment_turns": 1,
+      "cost": {
+        "online_runtime_sec": 92.93559401435778,
+        "online_turns": 1,
+        "online_prompt_tokens": 10835,
+        "online_completion_tokens": 6588,
+        "offline_extract_sec": 25.65129261976108,
+        "offline_git_sec": 0.006849225144833326,
+        "offline_analysis_sec": 24.025698408018798,
+        "total_runtime_sec": 118.5869128042832,
+        "human_minutes": null
+      }
+    },
+    {
+      "model": "glm-5.1",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [
+        "astropy/modeling/separable.py"
+      ],
+      "file_hit_rate": 1.0,
+      "unified_diff_len": 628,
+      "warnings_n": 0,
+      "n_constraints": 3,
+      "constraint_compliance": {
+        "docstring_test_kernel_normalization": true,
+        "docstring_transform_to": true,
+        "docstring_get_from_registry": true
+      },
+      "elapsed_s": 205.65,
+      "alignment_turns": 1,
+      "cost": {
+        "online_runtime_sec": 179.75355860684067,
+        "online_turns": 1,
+        "online_prompt_tokens": 10410,
+        "online_completion_tokens": 6630,
+        "offline_extract_sec": 25.892563380301,
+        "offline_git_sec": 0.18615434411913157,
+        "offline_analysis_sec": 24.161829541437328,
+        "total_runtime_sec": 205.64614645997062,
+        "human_minutes": null
+      }
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "unified_diff_len": 0,
+      "warnings_n": 0,
+      "n_constraints": 6,
+      "constraint_compliance": {
+        "c1": true,
+        "c2": true,
+        "c3": true,
+        "s1": true,
+        "s2": true,
+        "s3": true
+      },
+      "elapsed_s": 310.29,
+      "alignment_turns": 1,
+      "cost": {
+        "online_runtime_sec": 283.9430230120197,
+        "online_turns": 1,
+        "online_prompt_tokens": 10706,
+        "online_completion_tokens": 6264,
+        "offline_extract_sec": 26.34627941902727,
+        "offline_git_sec": 0.17979850340634584,
+        "offline_analysis_sec": 24.564550461713225,
+        "total_runtime_sec": 310.2893469100818,
+        "human_minutes": null
+      }
+    }
+  ]
+}

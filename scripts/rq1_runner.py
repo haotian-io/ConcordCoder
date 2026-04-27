@@ -238,35 +238,43 @@ def _aggregate_results(all_results: list[dict]) -> dict:
 # ── Multi-Model LLM Client ───────────────────────────────────────────────────
 
 def _get_llm_for_model(model_name: str):
-    """Get LLM client for a specific model."""
-    from concordcoder.llm_client import LLMClient
+    """Get LLM client for a specific model.
 
+    Sets environment variables before creating the client, since LLMClient
+    reads API key and base URL from env vars.
+    """
+    from concordcoder.llm_client import LLMClient, get_llm_client
+
+    # Set base URL and API key based on model
     base_url = os.environ.get("OPENAI_BASE_URL", "https://api.bltcy.ai/v1")
+    api_key = os.environ.get("OPENAI_API_KEY", "")
 
-    if model_name == "gpt-5.5":
-        key = os.environ.get("OPENAI_API_KEY", "")
-        return LLMClient(model=model_name, api_key=key, base_url=base_url)
-
-    elif model_name == "deepseek-v4-flash":
-        key = os.environ.get("DEEPSEEK_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
-        return LLMClient(model=model_name, api_key=key, base_url=base_url)
-
+    if model_name == "deepseek-v4-flash":
+        api_key = os.environ.get("DEEPSEEK_API_KEY", api_key)
     elif model_name == "deepseek-v4-pro":
-        key = os.environ.get("DEEPSEEK_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
-        return LLMClient(model=model_name, api_key=key, base_url=base_url)
-
+        api_key = os.environ.get("DEEPSEEK_API_KEY", api_key)
     elif model_name == "gemini-3.1-pro-preview":
-        key = os.environ.get("GOOGLE_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
-        base_url = os.environ.get("GEMINI_BASE_URL", "https://api.bltcy.ai/v1")
-        return LLMClient(model="gemini-3.1-pro-preview", api_key=key, base_url=base_url)
-
+        base_url = os.environ.get("GEMINI_BASE_URL", base_url)
+        api_key = os.environ.get("GOOGLE_API_KEY", api_key)
     elif model_name == "glm-5.1":
-        key = os.environ.get("ZHIPU_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
-        base_url = os.environ.get("ZHIPU_BASE_URL", "https://api.bltcy.ai/v1")
-        return LLMClient(model="glm-5.1", api_key=key, base_url=base_url)
-
-    else:
+        base_url = os.environ.get("ZHIPU_BASE_URL", base_url)
+        api_key = os.environ.get("ZHIPU_API_KEY", api_key)
+    elif model_name != "gpt-5.5":
         raise ValueError(f"Unsupported model: {model_name}. Supported: {SUPPORTED_MODELS}")
+
+    # Set environment variables before creating client
+    os.environ["OPENAI_API_KEY"] = api_key
+    os.environ["OPENAI_BASE_URL"] = base_url
+    os.environ["OPENAI_MODEL"] = model_name
+
+    try:
+        # Use get_llm_client which auto-detects backend from env
+        return get_llm_client(backend="openai")
+    except EnvironmentError as e:
+        raise EnvironmentError(
+            f"Failed to initialize {model_name}. "
+            f"API key may be missing. Set OPENAI_API_KEY or model-specific env var. Error: {e}"
+        ) from e
 
 
 # ── 运行函数（支持多模型）────────────────────────────────────────────────────
@@ -556,7 +564,7 @@ def main() -> None:
             print(f"\n[RQ1] Running {cond} on {iid} with {model_name} ...")
             try:
                 if cond == "concordcoder":
-                    row = run_concordcoder(inst, repo_root, llm, model_name)
+                    row = run_concordcoder(inst, repo_root, llm)
                 elif cond == "baseline" or cond == "baseline_direct":
                     row = run_baseline(inst, repo_root, llm)
                 elif cond == "baseline_posthoc":

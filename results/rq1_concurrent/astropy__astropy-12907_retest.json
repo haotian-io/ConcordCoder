@@ -1,0 +1,33 @@
+{
+  "results": [
+    {
+      "model": "gemini-3.1-pro-preview",
+      "file_hit_rate": 0.0,
+      "unified_diff_len": 489,
+      "code_plan_len": 489,
+      "predicted_files": [],
+      "diff_preview": "_operators)\n    elif isinstance(transform, Model):\n        return _coord_matrix(transform, 'left', transform.n_outputs)\n```\nIf `_coord_matrix` calls `_separable(m)`, and `_separable(m)` calls `_coord_matrix(m, 'left', m.n_outputs)`, we get an infinite recursion!\nAh!\nIf `m` is a simple model, `_separable(m)` calls `_coord_matrix(m, 'left', m.n_outputs)`.\nIf `_coord_matrix` calls `_separable(m)`, then:\n`_coord_matrix` -> `_separable` -> `_coord_matrix` -> `_separable` ...\n\nWe need to be",
+      "elapsed_s": 95.12
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "file_hit_rate": 1.0,
+      "unified_diff_len": 2699,
+      "code_plan_len": 3001,
+      "predicted_files": [
+        "astropy/modeling/separable.py"
+      ],
+      "diff_preview": "diff --git a/astropy/modeling/separable.py b/astropy/modeling/separable.py\nindex 1234567..abcdefg 100644\n--- a/astropy/modeling/separable.py\n+++ b/astropy/modeling/separable.py\n@@ -1,5 +1,6 @@\n # Licensed under a 3-clause BSD style license - see LICENSE.rst\n \n+from collections.abc import Iterable\n import numpy as np\n \n from astropy.modeling.core import CompoundModel, Model\n@@ -10,6 +11,24 @@ __all__ = ['separability_matrix']\n \n def separability_matrix(model):\n     \"\"\"\n+    Compute the separabili",
+      "elapsed_s": 96.94
+    },
+    {
+      "model": "deepseek-v4-pro",
+      "file_hit_rate": 0.0,
+      "unified_diff_len": 0,
+      "code_plan_len": 0,
+      "predicted_files": [],
+      "diff_preview": "",
+      "elapsed_s": 301.32
+    }
+  ]
+}
