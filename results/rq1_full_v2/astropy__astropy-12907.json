@@ -1,0 +1,548 @@
+{
+  "driver": "rq1_runner",
+  "split": "test",
+  "instance_id": "astropy__astropy-12907",
+  "models": [
+    "qwen3.5-plus",
+    "glm-5.1",
+    "gemini-3.1-pro-preview",
+    "MiniMax-M2.7",
+    "kimi-k2.6",
+    "deepseek-v4-pro"
+  ],
+  "conditions": [
+    "concordcoder",
+    "baseline"
+  ],
+  "rows": [
+    {
+      "condition": "qwen3.5-plus_concordcoder",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [
+        "astropy/modeling/separable.py"
+      ],
+      "file_hit_rate": 1.0,
+      "n_predicted_paths": 1,
+      "code_plan_len": 2427,
+      "unified_diff_len": 2020,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 3,
+      "constraint_compliance": {
+        "docstring_test_kernel_normalization": true,
+        "docstring_transform_to": true,
+        "docstring_get_from_registry": true
+      },
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 142.7,
+      "alignment_turn_log_n": 1,
+      "cost": {
+        "online_runtime_sec": 139.26494301110506,
+        "online_turns": 1,
+        "online_prompt_tokens": 10384,
+        "online_completion_tokens": 7630,
+        "offline_extract_sec": 3.43099618377164,
+        "offline_git_sec": 0.00011382484808564186,
+        "offline_analysis_sec": 3.3174507282674313,
+        "total_runtime_sec": 142.69596477691084,
+        "human_minutes": null
+      },
+      "model": "qwen3.5-plus",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "qwen3.5-plus_baseline",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [
+        "astropy/modeling/separable.py"
+      ],
+      "file_hit_rate": 1.0,
+      "n_predicted_paths": 1,
+      "code_plan_len": 1368,
+      "unified_diff_len": 1368,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 0,
+      "constraint_compliance": {},
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 16.63,
+      "alignment_turn_log_n": 0,
+      "cost": {
+        "online_runtime_sec": 16.6311,
+        "online_turns": 1,
+        "online_prompt_tokens": 433,
+        "online_completion_tokens": 885,
+        "offline_extract_sec": 0.0,
+        "offline_git_sec": 0.0,
+        "offline_analysis_sec": 0.0,
+        "total_runtime_sec": 16.6311
+      },
+      "model": "qwen3.5-plus",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "glm-5.1_concordcoder",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 15183,
+      "unified_diff_len": 148,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 3,
+      "constraint_compliance": {
+        "docstring_test_kernel_normalization": true,
+        "docstring_transform_to": true,
+        "docstring_get_from_registry": true
+      },
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 227.72,
+      "alignment_turn_log_n": 1,
+      "cost": {
+        "online_runtime_sec": 224.14542183838785,
+        "online_turns": 1,
+        "online_prompt_tokens": 10410,
+        "online_completion_tokens": 6520,
+        "offline_extract_sec": 3.579036840237677,
+        "offline_git_sec": 0.00011828308925032616,
+        "offline_analysis_sec": 3.4616894996725023,
+        "total_runtime_sec": 227.72449943097308,
+        "human_minutes": null
+      },
+      "model": "glm-5.1",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "glm-5.1_baseline",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [
+        "astropy/modeling/separable.py"
+      ],
+      "file_hit_rate": 1.0,
+      "n_predicted_paths": 1,
+      "code_plan_len": 16731,
+      "unified_diff_len": 16731,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 0,
+      "constraint_compliance": {},
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 135.92,
+      "alignment_turn_log_n": 0,
+      "cost": {
+        "online_runtime_sec": 135.9227,
+        "online_turns": 1,
+        "online_prompt_tokens": 406,
+        "online_completion_tokens": 4096,
+        "offline_extract_sec": 0.0,
+        "offline_git_sec": 0.0,
+        "offline_analysis_sec": 0.0,
+        "total_runtime_sec": 135.9227
+      },
+      "model": "glm-5.1",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "gemini-3.1-pro-preview_concordcoder",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 495,
+      "unified_diff_len": 495,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 5,
+      "constraint_compliance": {
+        "c1": true,
+        "c2": true,
+        "c3": true,
+        "s1": true,
+        "s2": true
+      },
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 77.37,
+      "alignment_turn_log_n": 1,
+      "cost": {
+        "online_runtime_sec": 73.82566092722118,
+        "online_turns": 1,
+        "online_prompt_tokens": 10437,
+        "online_completion_tokens": 7119,
+        "offline_extract_sec": 3.5485833548009396,
+        "offline_git_sec": 0.00012257695198059082,
+        "offline_analysis_sec": 3.4337396705523133,
+        "total_runtime_sec": 77.37426575785503,
+        "human_minutes": null
+      },
+      "model": "gemini-3.1-pro-preview",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "gemini-3.1-pro-preview_baseline",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 522,
+      "unified_diff_len": 522,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 0,
+      "constraint_compliance": {},
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 33.98,
+      "alignment_turn_log_n": 0,
+      "cost": {
+        "online_runtime_sec": 33.982,
+        "online_turns": 1,
+        "online_prompt_tokens": 480,
+        "online_completion_tokens": 4092,
+        "offline_extract_sec": 0.0,
+        "offline_git_sec": 0.0,
+        "offline_analysis_sec": 0.0,
+        "total_runtime_sec": 33.982
+      },
+      "model": "gemini-3.1-pro-preview",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "MiniMax-M2.7_concordcoder",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 2291,
+      "unified_diff_len": 2291,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 3,
+      "constraint_compliance": {
+        "docstring_test_kernel_normalization": true,
+        "docstring_transform_to": true,
+        "docstring_get_from_registry": true
+      },
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 25.69,
+      "alignment_turn_log_n": 1,
+      "cost": {
+        "online_runtime_sec": 21.72058311710134,
+        "online_turns": 1,
+        "online_prompt_tokens": 9724,
+        "online_completion_tokens": 1932,
+        "offline_extract_sec": 3.9728575232438743,
+        "offline_git_sec": 0.00012472877278923988,
+        "offline_analysis_sec": 3.707769645843655,
+        "total_runtime_sec": 25.693460299167782,
+        "human_minutes": null
+      },
+      "model": "MiniMax-M2.7",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "MiniMax-M2.7_baseline",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 836,
+      "unified_diff_len": 836,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 0,
+      "constraint_compliance": {},
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 5.58,
+      "alignment_turn_log_n": 0,
+      "cost": {
+        "online_runtime_sec": 5.5767,
+        "online_turns": 1,
+        "online_prompt_tokens": 422,
+        "online_completion_tokens": 344,
+        "offline_extract_sec": 0.0,
+        "offline_git_sec": 0.0,
+        "offline_analysis_sec": 0.0,
+        "total_runtime_sec": 5.5767
+      },
+      "model": "MiniMax-M2.7",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "kimi-k2.6_concordcoder",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 16879,
+      "unified_diff_len": 123,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 3,
+      "constraint_compliance": {
+        "docstring_test_kernel_normalization": true,
+        "docstring_transform_to": true,
+        "docstring_get_from_registry": true
+      },
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 160.76,
+      "alignment_turn_log_n": 1,
+      "cost": {
+        "online_runtime_sec": 157.22371852211654,
+        "online_turns": 1,
+        "online_prompt_tokens": 9843,
+        "online_completion_tokens": 6759,
+        "offline_extract_sec": 3.531692401971668,
+        "offline_git_sec": 0.00011936994269490242,
+        "offline_analysis_sec": 3.4011623193509877,
+        "total_runtime_sec": 160.75543344765902,
+        "human_minutes": null
+      },
+      "model": "kimi-k2.6",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "kimi-k2.6_baseline",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 17092,
+      "unified_diff_len": 17092,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 0,
+      "constraint_compliance": {},
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 35.78,
+      "alignment_turn_log_n": 0,
+      "cost": {
+        "online_runtime_sec": 35.7771,
+        "online_turns": 1,
+        "online_prompt_tokens": 409,
+        "online_completion_tokens": 4096,
+        "offline_extract_sec": 0.0,
+        "offline_git_sec": 0.0,
+        "offline_analysis_sec": 0.0,
+        "total_runtime_sec": 35.7771
+      },
+      "model": "kimi-k2.6",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "deepseek-v4-pro_concordcoder",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [
+        "astropy/modeling/separable.py"
+      ],
+      "file_hit_rate": 1.0,
+      "n_predicted_paths": 1,
+      "code_plan_len": 1751,
+      "unified_diff_len": 1314,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 5,
+      "constraint_compliance": {
+        "c1": true,
+        "c2": true,
+        "c3": true,
+        "s1": true,
+        "s2": true
+      },
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 163.49,
+      "alignment_turn_log_n": 1,
+      "cost": {
+        "online_runtime_sec": 159.90738566219807,
+        "online_turns": 1,
+        "online_prompt_tokens": 10690,
+        "online_completion_tokens": 4826,
+        "offline_extract_sec": 3.584075105842203,
+        "offline_git_sec": 0.00013075582683086395,
+        "offline_analysis_sec": 3.4694407270289958,
+        "total_runtime_sec": 163.4914895822294,
+        "human_minutes": null
+      },
+      "model": "deepseek-v4-pro",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    },
+    {
+      "condition": "deepseek-v4-pro_baseline",
+      "instance_id": "astropy__astropy-12907",
+      "repo": "astropy/astropy",
+      "base_commit": "d16bfe05a744909de4b27f5875fe0d4ed41ce607",
+      "target_file_gold": "astropy/modeling/separable.py",
+      "target_files_gold": [
+        "astropy/modeling/separable.py"
+      ],
+      "predicted_files": [],
+      "file_hit_rate": 0.0,
+      "n_predicted_paths": 0,
+      "code_plan_len": 0,
+      "unified_diff_len": 0,
+      "warnings_n": 0,
+      "warnings": [],
+      "n_constraints": 0,
+      "constraint_compliance": {},
+      "n_parsed_files": 0,
+      "probe": {},
+      "elapsed_s": 127.17,
+      "alignment_turn_log_n": 0,
+      "cost": {
+        "online_runtime_sec": 127.1695,
+        "online_turns": 1,
+        "online_prompt_tokens": 470,
+        "online_completion_tokens": 4096,
+        "offline_extract_sec": 0.0,
+        "offline_git_sec": 0.0,
+        "offline_analysis_sec": 0.0,
+        "total_runtime_sec": 127.1695
+      },
+      "model": "deepseek-v4-pro",
+      "fairness_budget": {
+        "max_turns": 3,
+        "max_prompt_tokens": 4000,
+        "max_completion_tokens": 4000,
+        "max_wallclock_sec": 300
+      }
+    }
+  ],
+  "fairness_budget": {
+    "max_turns": 3,
+    "max_prompt_tokens": 4000,
+    "max_completion_tokens": 4000,
+    "max_wallclock_sec": 300
+  },
+  "enhanced_metrics_enabled": false
+}
