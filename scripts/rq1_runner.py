@@ -1,12 +1,31 @@
 #!/usr/bin/env python3
 """
-RQ1 Experiment Runner — Local SWE-bench Lite
+RQ1 Experiment Runner — Enhanced Multi-Model Evaluation
 
 读取本地 Parquet 格式的 SWE-bench Lite 数据集（无需联网），
-对指定 instance_id 分别运行：
+对指定 instance_id 分别运行多模型和多种方法的对比实验：
+
+Models:
+  - gpt-5.5 (default)
+  - gemini-3.1-pro-preview
+  - deepseek-v4-flash
+  - deepseek-v4-pro
+  - glm-5.1
+
+Conditions:
   - ConcordCoder 完整管线（with alignment）
-  - Direct Baseline（无对齐，单轮生成）
-并输出结构化 JSON 结果，用于 RQ1 对比分析。
+  - Baseline Direct（无对齐，单轮生成）
+  - Baseline PostHoc（有界反馈修正）
+
+Evaluation Metrics:
+  - File Hit Rate (FHR)
+  - Diff Generation Rate (DGR)
+  - Pass@1 (Test Pass Rate)
+  - Constraint Violation Rate (CVR)
+  - Edit Distance to Ground Truth (ED)
+  - AST Similarity (AST-SIM)
+  - CodeBLEU Score
+  - Code Complexity Metrics
 
 用法：
   # 打印 meta（无需 LLM key）
@@ -19,14 +38,22 @@ RQ1 Experiment Runner — Local SWE-bench Lite
   export CONCORD_SWE_REPO_ROOT=/path/to/astropy
   python3 scripts/rq1_runner.py --instance-id astropy__astropy-12907 --out-dir results/rq1/
 
-  # 跑 demo 5 条（需逐条 checkout）
+  # 多模型对比
+  python3 scripts/rq1_runner.py --instance-id astropy__astropy-12907 \
+      --models gpt-5.5,deepseek-v4-flash --out-dir results/rq1_multi/
+
+  # 跑 demo 5 条
   python3 scripts/rq1_runner.py --config experiments/swe_tiny_config.yaml --dry-run
 
 环境变量：
   CONCORD_SWE_REPO_ROOT   已 checkout 到 base_commit 的仓库根路径
   OPENAI_API_KEY          OpenAI key（优先）
   ANTHROPIC_API_KEY       Anthropic key（备用）
+  GOOGLE_API_KEY          Google API key（Gemini）
+  DEEPSEEK_API_KEY        DeepSeek API key
+  ZHIPU_API_KEY           Zhipu AI key (GLM)
   SWE_BENCH_LOCAL_DIR     本地数据集目录（默认: ../SWE-bench_Lite/data）
+  CONCORD_MODEL           默认模型（默认: gpt-5.5）
 """
 
 from __future__ import annotations
@@ -38,6 +65,7 @@ import re
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 _CODE_ROOT = Path(__file__).resolve().parent.parent
 if str(_CODE_ROOT / "src") not in sys.path:
@@ -47,6 +75,14 @@ if str(_CODE_ROOT / "src") not in sys.path:
 _DEFAULT_LOCAL_DIR = _CODE_ROOT.parent / "SWE-bench_Lite" / "data"
 _DEFAULT_SPLIT = "test"
 
+# ── 支持的模型列表 ──────────────────────────────────────────────────────────
+SUPPORTED_MODELS = [
+    "gpt-5.5",
+    "gemini-3.1-pro-preview",
+    "deepseek-v4-flash",
+    "deepseek-v4-pro",
+    "glm-5.1",
+]
 
 # ── 数据加载 ─────────────────────────────────────────────────────────────────
 
@@ -182,7 +218,58 @@ def _load_yaml_ids(config: Path) -> list[str]:
         return []
 
 
-# ── 运行函数 ─────────────────────────────────────────────────────────────────
+# ── Enhanced Metrics ─────────────────────────────────────────────────────────
+
+def _compute_enhanced_metrics(result: dict, inst: dict) -> dict:
+    """Compute enhanced evaluation metrics for a result."""
+    from concordcoder.evaluation_metrics import EvaluationMetrics
+
+    metrics = EvaluationMetrics(inst, result)
+    return metrics.compute_all_metrics()
+
+
+def _aggregate_results(all_results: list[dict]) -> dict:
+    """Aggregate results across multiple runs."""
+    from concordcoder.evaluation_metrics import aggregate_metrics
+
+    return aggregate_metrics(all_results)
+
+
+# ── Multi-Model LLM Client ───────────────────────────────────────────────────
+
+def _get_llm_for_model(model_name: str):
+    """Get LLM client for a specific model."""
+    from concordcoder.llm_client import LLMClient
+
+    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.bltcy.ai/v1")
+
+    if model_name == "gpt-5.5":
+        key = os.environ.get("OPENAI_API_KEY", "")
+        return LLMClient(model=model_name, api_key=key, base_url=base_url)
+
+    elif model_name == "deepseek-v4-flash":
+        key = os.environ.get("DEEPSEEK_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        return LLMClient(model=model_name, api_key=key, base_url=base_url)
+
+    elif model_name == "deepseek-v4-pro":
+        key = os.environ.get("DEEPSEEK_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        return LLMClient(model=model_name, api_key=key, base_url=base_url)
+
+    elif model_name == "gemini-3.1-pro-preview":
+        key = os.environ.get("GOOGLE_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        base_url = os.environ.get("GEMINI_BASE_URL", "https://api.bltcy.ai/v1")
+        return LLMClient(model="gemini-3.1-pro-preview", api_key=key, base_url=base_url)
+
+    elif model_name == "glm-5.1":
+        key = os.environ.get("ZHIPU_API_KEY", os.environ.get("OPENAI_API_KEY", ""))
+        base_url = os.environ.get("ZHIPU_BASE_URL", "https://api.bltcy.ai/v1")
+        return LLMClient(model="glm-5.1", api_key=key, base_url=base_url)
+
+    else:
+        raise ValueError(f"Unsupported model: {model_name}. Supported: {SUPPORTED_MODELS}")
+
+
+# ── 运行函数（支持多模型）────────────────────────────────────────────────────
 
 def run_concordcoder(inst: dict, repo_root: Path, llm) -> dict:
     """运行 ConcordCoder 完整管线（with alignment）。"""
@@ -350,7 +437,8 @@ def run_baseline_posthoc(inst: dict, repo_root: Path, llm) -> dict:
 
 def main() -> None:
     p = argparse.ArgumentParser(
-        description="RQ1 Runner: ConcordCoder vs Baseline on local SWE-bench Lite."
+        description="RQ1 Runner: ConcordCoder vs Baseline on local SWE-bench Lite. "
+                    "Supports multi-model evaluation."
     )
     p.add_argument("--instance-id", help="单条 instance_id")
     p.add_argument("--config", type=Path, help="YAML config（含 instance_ids）")
@@ -361,10 +449,21 @@ def main() -> None:
     p.add_argument("--conditions", default="concordcoder,baseline",
                    help="运行条件，逗号分隔: concordcoder,baseline,baseline_posthoc")
     p.add_argument("--split", default=_DEFAULT_SPLIT, help="数据集 split（默认: test）")
+    p.add_argument("--models", default="gpt-5.5",
+                   help="模型列表，逗号分隔 (gpt-5.5,deepseek-v4-flash,deepseek-v4-pro,gemini-3.1-pro-preview,glm-5.1)")
+    p.add_argument("--enhanced-metrics", action="store_true",
+                   help="计算增强评估指标（Edit Distance, AST Similarity, CodeBLEU等）")
     args = p.parse_args()
 
     split = args.split
     conditions = [c.strip() for c in args.conditions.split(",")]
+    models = [m.strip() for m in args.models.split(",")]
+
+    # 验证模型
+    for m in models:
+        if m not in SUPPORTED_MODELS:
+            sys.exit(f"不支持的模型: {m}。支持的模型: {SUPPORTED_MODELS}")
+
     fairness_budget = {
         "max_turns": int(os.environ.get("CONCORD_FAIR_MAX_TURNS", "3")),
         "max_prompt_tokens": int(os.environ.get("CONCORD_FAIR_MAX_PROMPT_TOKENS", "4000")),
@@ -429,49 +528,88 @@ def main() -> None:
             "请循环逐条运行，每次 checkout 对应 commit。"
         )
 
-    # 初始化 LLM
-    from concordcoder.llm_client import get_llm_client
-    try:
-        llm = get_llm_client()
-    except EnvironmentError as e:
-        sys.exit(str(e))
-
     out_dir = args.out_dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
     iid = ids[0]
     inst = _load_instance(iid, split)
-    results = []
+    all_results = []
 
-    for cond in conditions:
-        print(f"\n[RQ1] Running {cond} on {iid} ...")
+    # 多模型循环
+    for model_name in models:
+        print(f"\n{'='*60}")
+        print(f"[RQ1] Model: {model_name}")
+        print(f"{'='*60}")
+
         try:
-            if cond == "concordcoder":
-                row = run_concordcoder(inst, repo_root, llm)
-            elif cond == "baseline" or cond == "baseline_direct":
-                row = run_baseline(inst, repo_root, llm)
-            elif cond == "baseline_posthoc":
-                row = run_baseline_posthoc(inst, repo_root, llm)
-            else:
-                print(f"[WARN] 未知条件: {cond}", file=sys.stderr)
-                continue
-            row["fairness_budget"] = fairness_budget
-            results.append(row)
-            print(f"  ✅  elapsed={row['elapsed_s']}s  warnings={row['warnings_n']}  "
-                  f"unified_diff_len={row['unified_diff_len']}")
-        except Exception as e:
-            print(f"  ❌  {cond} failed: {e}", file=sys.stderr)
-            results.append({"condition": cond, "instance_id": iid, "error": str(e)})
+            llm = _get_llm_for_model(model_name)
+        except EnvironmentError as e:
+            print(f"[WARN] 无法初始化模型 {model_name}: {e}", file=sys.stderr)
+            all_results.append({
+                "model": model_name,
+                "conditions": conditions,
+                "error": str(e),
+            })
+            continue
+
+        for cond in conditions:
+            print(f"\n[RQ1] Running {cond} on {iid} with {model_name} ...")
+            try:
+                if cond == "concordcoder":
+                    row = run_concordcoder(inst, repo_root, llm, model_name)
+                elif cond == "baseline" or cond == "baseline_direct":
+                    row = run_baseline(inst, repo_root, llm)
+                elif cond == "baseline_posthoc":
+                    row = run_baseline_posthoc(inst, repo_root, llm)
+                else:
+                    print(f"[WARN] 未知条件: {cond}", file=sys.stderr)
+                    continue
+
+                row["model"] = model_name
+                row["condition"] = f"{model_name}_{cond}"
+                row["fairness_budget"] = fairness_budget
+
+                # 计算增强指标
+                if args.enhanced_metrics:
+                    try:
+                        enhanced = _compute_enhanced_metrics(row, inst)
+                        row["enhanced_metrics"] = enhanced
+                    except Exception as e:
+                        print(f"[WARN] 增强指标计算失败: {e}", file=sys.stderr)
+
+                all_results.append(row)
+                print(f"  ✅  elapsed={row['elapsed_s']}s  warnings={row['warnings_n']}  "
+                      f"unified_diff_len={row['unified_diff_len']}")
+
+            except Exception as e:
+                print(f"  ❌  {cond} failed: {e}", file=sys.stderr)
+                all_results.append({
+                    "model": model_name,
+                    "condition": cond,
+                    "instance_id": iid,
+                    "error": str(e)
+                })
 
     # 保存结果
     out_obj = {
         "driver": "rq1_runner",
         "split": split,
         "instance_id": iid,
+        "models": models,
         "conditions": conditions,
-        "rows": results,
+        "rows": all_results,
         "fairness_budget": fairness_budget,
+        "enhanced_metrics_enabled": args.enhanced_metrics,
     }
+
+    # 聚合结果
+    if len(all_results) > 1:
+        try:
+            aggregated = _aggregate_results(all_results)
+            out_obj["aggregated_metrics"] = aggregated
+        except Exception as e:
+            print(f"[WARN] 结果聚合失败: {e}", file=sys.stderr)
+
     safe_id = iid.replace("/", "_")
     out_file = out_dir / f"{safe_id}.json"
     out_file.write_text(json.dumps(out_obj, ensure_ascii=False, indent=2), encoding="utf-8")
